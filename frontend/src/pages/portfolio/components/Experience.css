@@ -1,0 +1,147 @@
+.experience {
+  padding: 80px 20px;
+  background: var(--bg-color);
+}
+
+.experience h2 {
+  font-size: 36px;
+  text-align: center;
+  margin-bottom: 50px;
+  color: var(--primary-color);
+}
+
+.timeline {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  padding: 20px 0;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-color);
+  transform: translateX(-50%);
+}
+
+.timeline-item {
+  margin-bottom: 40px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr;
+  column-gap: 20px;
+  align-items: start;
+}
+
+.timeline-date {
+  display: flex;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--accent-color);
+  font-weight: 600;
+  white-space: nowrap;
+  justify-content: flex-end;
+  text-align: right;
+  padding-top: 6px;
+}
+
+.timeline-marker {
+  position: relative;
+  width: 100%;
+  display: grid;
+  place-items: start center;
+  padding-top: 6px;
+}
+
+.timeline-marker::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: var(--secondary-color);
+  border: 3px solid var(--accent-color);
+  border-radius: 50%;
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.timeline-date .current {
+  background: var(--accent-color);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.timeline-content {
+  background: var(--secondary-color);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-content h3 {
+  margin: 0 0 5px 0;
+  color: var(--primary-color);
+}
+
+.timeline-content h4 {
+  margin: 0 0 10px 0;
+  color: var(--accent-color);
+  font-size: 16px;
+}
+
+.timeline-content .location {
+  color: #999;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.timeline-content p {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .experience {
+    padding: 60px 20px;
+  }
+
+  .experience h2 {
+    font-size: 28px;
+  }
+
+  .timeline::before {
+    left: 30px;
+  }
+
+  .timeline-item {
+    grid-template-columns: 30px 1fr;
+    column-gap: 14px;
+  }
+
+  .timeline-marker {
+    grid-column: 1;
+    place-items: start center;
+  }
+
+  .timeline-marker::before {
+    width: 14px;
+    height: 14px;
+  }
+
+  .timeline-date {
+    grid-column: 2;
+    justify-content: flex-start;
+    text-align: left;
+    padding-top: 0;
+  }
+
+  .timeline-content {
+    grid-column: 2;
+  }
+}

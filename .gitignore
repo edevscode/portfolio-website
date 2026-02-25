@@ -1,0 +1,41 @@
+# Node
+node_modules/
+dist/
+build/
+.cache/
+
+# Vite
+frontend/dist/
+frontend/.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+.env
+.venv/
+venv/
+ENV/
+
+# Django
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+
+# Local data exports
+backend/data*.json
+data-clean.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/

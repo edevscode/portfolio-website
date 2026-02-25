@@ -1,0 +1,117 @@
+.hero {
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-color) 100%);
+  color: var(--secondary-color);
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.hero-avatar {
+  width: 110px;
+  height: 110px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  margin: 0 auto 18px;
+}
+
+.hero-avatar.placeholder {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.hero-content h1 {
+  font-size: 56px;
+  margin: 0 0 20px 0;
+  animation: slideInDown 0.8s ease;
+}
+
+.hero-content p {
+  font-size: 24px;
+  margin: 10px 0;
+  opacity: 0.9;
+}
+
+.hero-content .bio {
+  font-size: 16px;
+  max-width: 600px;
+  margin: 20px auto 0;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 26px;
+  flex-wrap: wrap;
+}
+
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.hero-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+.hero-btn.primary {
+  background: var(--secondary-color);
+  color: var(--primary-color);
+}
+
+.hero-btn.secondary {
+  background: transparent;
+  color: var(--secondary-color);
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    min-height: 300px;
+    padding: 40px 20px;
+  }
+
+  .hero-avatar {
+    width: 90px;
+    height: 90px;
+    margin-bottom: 14px;
+  }
+
+  .hero-content h1 {
+    font-size: 36px;
+  }
+
+  .hero-content p {
+    font-size: 18px;
+  }
+
+  .hero-actions {
+    margin-top: 18px;
+  }
+}
