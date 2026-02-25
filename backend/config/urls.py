@@ -18,8 +18,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+def root_view(request):
+    return JsonResponse({'message': 'Portfolio API is running', 'status': 'ok'})
 
 urlpatterns = [
+    path('', root_view, name='root'),
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('api-auth/', include('rest_framework.urls')),
