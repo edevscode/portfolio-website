@@ -5,7 +5,13 @@ from .views_login import login_view
 from django.http import JsonResponse
 
 def health_check(request):
-    return JsonResponse({'status': 'healthy', 'database': 'connected'})
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        return JsonResponse({'status': 'healthy', 'database': 'connected'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'database': 'disconnected', 'error': str(e)}, status=500)
 
 router = DefaultRouter()
 router.register(r'themes', views.ThemeViewSet)
