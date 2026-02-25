@@ -3,7 +3,9 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from .views_login import login_view
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
+@csrf_exempt
 def health_check(request):
     try:
         from django.db import connection

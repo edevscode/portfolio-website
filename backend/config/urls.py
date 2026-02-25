@@ -19,7 +19,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
+@csrf_exempt
 def root_view(request):
     return JsonResponse({'message': 'Portfolio API is running', 'status': 'ok'})
 
