@@ -40,14 +40,15 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 # Diagnostic: Set DEBUG=True to see the real error on Render
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-# Diagnostic: Use '*' to confirm if 400 is caused by ALLOWED_HOSTS
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=Csv())
+# Diagnostic: Force '*' to bypass all host checks
+ALLOWED_HOSTS = ['*']
 
-# Render Proxy SSL & Host Headers
+# Render Proxy Headers (Always active for diagnosis)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
 if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    USE_X_FORWARDED_HOST = True
-    USE_X_FORWARDED_PORT = True
     SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
