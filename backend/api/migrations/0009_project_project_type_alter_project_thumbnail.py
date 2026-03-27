@@ -10,11 +10,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='project',
-            name='project_type',
-            field=models.CharField(choices=[('live', 'Live Site / Web App'), ('local', 'Local Project / Gallery')], default='live', max_length=20),
-        ),
+        # project_type column already exists in DB — skip AddField
         migrations.AlterField(
             model_name='project',
             name='thumbnail',
