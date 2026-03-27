@@ -37,7 +37,7 @@ if env_file.exists():
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# Diagnostic: Set DEBUG=True to see the real error on Render
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 # Diagnostic: Use '*' to confirm if 400 is caused by ALLOWED_HOSTS
