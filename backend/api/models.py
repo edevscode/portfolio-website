@@ -72,10 +72,16 @@ class Theme(models.Model):
 
 
 class Project(models.Model):
+    PROJECT_TYPES = [
+        ('live', 'Live Site / Web App'),
+        ('local', 'Local Project / Gallery'),
+    ]
+    
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
     description = models.TextField()
-    thumbnail = models.ImageField(upload_to='project_thumbnails/')
+    project_type = models.CharField(max_length=20, choices=PROJECT_TYPES, default='live')
+    thumbnail = models.ImageField(upload_to='project_thumbnails/', blank=True, null=True)
     images = models.JSONField(default=list, blank=True)  # List of image paths
     url = models.URLField(blank=True, null=True)
     github_url = models.URLField(blank=True, null=True)
