@@ -40,12 +40,15 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.onrender.com,localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = [
+    'portfolio-website-9kxw.onrender.com',
+    '.onrender.com',
+    'localhost',
+    '127.0.0.1',
+]
 
-# Render Proxy Headers (required for correct host/SSL detection behind load balancer)
+# Render Proxy Headers (required for correct SSL detection behind load balancer)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-USE_X_FORWARDED_PORT = True
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
