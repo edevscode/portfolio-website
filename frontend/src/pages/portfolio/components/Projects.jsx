@@ -330,148 +330,173 @@ export default function Projects({ projects }) {
       <div className="container">
         <h2 style={{ color: colors.primary }}>Featured Projects</h2>
 
-        <div className="projects-list">
-          {projects && projects.map((project) => {
-            if (project.project_type === 'live' || project.project_type === undefined) {
-              return (
-                <div 
-                  key={project.id} 
-                  className="project-card" 
-                  style={{
-                    backgroundColor: colors.secondary,
-                    border: `1px solid ${colors.accent}`,
-                    borderRadius: '14px',
-                    overflow: 'hidden',
-                    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <div className="project-image" style={{ height: 'auto', maxHeight: '400px', background: 'rgba(0,0,0,0.04)' }}>
-                    {project.thumbnail ? (
-                      <img 
-                        src={normalizeMediaUrl(project.thumbnail)} 
-                        alt={project.title} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
-                      />
-                    ) : (
-                      <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        No Image
-                      </div>
-                    )}
-                  </div>
-                  <div className="project-info" style={{ padding: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
-                      <h3 style={{ margin: 0, color: colors.primary, fontSize: '24px' }}>{project.title}</h3>
-                      <div className="project-links" style={{ display: 'flex', gap: '10px' }}>
-                        {project.url && (
-                          <a 
-                            href={project.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            style={{ 
-                              padding: '8px 16px', 
-                              borderRadius: '8px', 
-                              textDecoration: 'none', 
-                              backgroundColor: colors.accent, 
-                              color: colors.background, 
-                              fontWeight: 'bold',
-                              fontSize: '14px'
-                            }}
-                          >
-                            Live Site
-                          </a>
-                        )}
-                        {project.github_url && (
-                          <a 
-                            href={project.github_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            style={{ 
-                              padding: '8px 16px', 
-                              borderRadius: '8px', 
-                              textDecoration: 'none', 
-                              backgroundColor: colors.primary, 
-                              color: colors.background, 
-                              fontWeight: 'bold',
-                              fontSize: '14px'
-                            }}
-                          >
-                            GitHub
-                          </a>
+        {(() => {
+          const liveProjects = projects ? projects.filter(p => p.project_type === 'live' || p.project_type === undefined) : []
+          const localProjects = projects ? projects.filter(p => p.project_type === 'local') : []
+
+          return (
+            <>
+              {liveProjects.length > 0 && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+                  gap: '32px',
+                  marginBottom: localProjects.length > 0 ? '60px' : '0'
+                }}>
+                  {liveProjects.map((project) => (
+                    <div 
+                      key={project.id} 
+                      className="project-card" 
+                      style={{
+                        backgroundColor: colors.secondary,
+                        border: `1px solid ${colors.accent}`,
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100%'
+                      }}
+                    >
+                      <div className="project-image" style={{ height: '240px', background: 'rgba(0,0,0,0.04)', flexShrink: 0 }}>
+                        {project.thumbnail ? (
+                          <img 
+                            src={normalizeMediaUrl(project.thumbnail)} 
+                            alt={project.title} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                          />
+                        ) : (
+                          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+                            No Image
+                          </div>
                         )}
                       </div>
+                      <div className="project-info" style={{ padding: '24px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <h3 style={{ margin: '0 0 16px 0', color: colors.primary, fontSize: '22px', lineHeight: 1.3 }}>{project.title}</h3>
+                        
+                        {project.description && (
+                          <pre style={{ margin: '0 0 24px 0', color: colors.text, whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: '15px', lineHeight: '1.6', flex: 1, opacity: 0.9 }}>
+                            {project.description}
+                          </pre>
+                        )}
+                        
+                        <div className="project-links" style={{ display: 'flex', gap: '12px', marginTop: 'auto', flexWrap: 'wrap' }}>
+                          {project.url && (
+                            <a 
+                              href={project.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              style={{ 
+                                padding: '10px 20px', 
+                                borderRadius: '10px', 
+                                textDecoration: 'none', 
+                                backgroundColor: colors.accent, 
+                                color: colors.background, 
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                textAlign: 'center',
+                                flex: 1,
+                                minWidth: 'fit-content'
+                              }}
+                            >
+                              Live Site
+                            </a>
+                          )}
+                          {project.github_url && (
+                            <a 
+                              href={project.github_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              style={{ 
+                                padding: '10px 20px', 
+                                borderRadius: '10px', 
+                                textDecoration: 'none', 
+                                backgroundColor: colors.primary, 
+                                color: colors.background, 
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                textAlign: 'center',
+                                flex: 1,
+                                minWidth: 'fit-content'
+                              }}
+                            >
+                              GitHub
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {project.description && (
-                      <pre style={{ margin: 0, color: colors.text, whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: '15px', lineHeight: '1.6' }}>
-                        {project.description}
-                      </pre>
-                    )}
-                  </div>
+                  ))}
                 </div>
-              )
-            }
+              )}
 
-            return (
-              <div key={project.id} className="project-row">
-                <div
-                  className="project-details"
-                  style={{
-                    borderColor: colors.accent,
-                    backgroundColor: colors.secondary,
-                  }}
-                >
-                  <div className="project-details__header">
-                    <h3 style={{ color: colors.primary }}>{project.title}</h3>
-                    <div className="project-details__links">
-                      {project.url && (
-                        <a
-                          href={project.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            backgroundColor: colors.accent,
-                            color: colors.background,
-                          }}
-                        >
-                          Live Site
-                        </a>
-                      )}
-                      {project.github_url && (
-                        <a
-                          href={project.github_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            backgroundColor: colors.primary,
-                            color: colors.background,
-                          }}
-                        >
-                          GitHub
-                        </a>
-                      )}
+              {localProjects.length > 0 && (
+                <div className="projects-list">
+                  {localProjects.map((project) => (
+                    <div key={project.id} className="project-row">
+                      <div
+                        className="project-details"
+                        style={{
+                          borderColor: colors.accent,
+                          backgroundColor: colors.secondary,
+                        }}
+                      >
+                        <div className="project-details__header">
+                          <h3 style={{ color: colors.primary }}>{project.title}</h3>
+                          <div className="project-details__links">
+                            {project.url && (
+                              <a
+                                href={project.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  backgroundColor: colors.accent,
+                                  color: colors.background,
+                                }}
+                              >
+                                Live Site
+                              </a>
+                            )}
+                            {project.github_url && (
+                              <a
+                                href={project.github_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  backgroundColor: colors.primary,
+                                  color: colors.background,
+                                }}
+                              >
+                                GitHub
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        {project.description ? (
+                          <pre className="project-details__description" style={{ color: colors.text }}>
+                            {project.description}
+                          </pre>
+                        ) : null}
+                      </div>
+
+                      <div
+                        className="project-media"
+                        style={{
+                          borderColor: colors.accent,
+                          backgroundColor: colors.secondary,
+                        }}
+                      >
+                        <ProjectMediaCarousel project={project} onOpen={openImage} />
+                      </div>
                     </div>
-                  </div>
-
-                  {project.description ? (
-                    <pre className="project-details__description" style={{ color: colors.text }}>
-                      {project.description}
-                    </pre>
-                  ) : null}
+                  ))}
                 </div>
-
-                <div
-                  className="project-media"
-                  style={{
-                    borderColor: colors.accent,
-                    backgroundColor: colors.secondary,
-                  }}
-                >
-                  <ProjectMediaCarousel project={project} onOpen={openImage} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
+              )}
+            </>
+          )
+        })()}
       </div>
     </section>
   )
