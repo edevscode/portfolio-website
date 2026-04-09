@@ -126,6 +126,13 @@ function ImageModal({ open, image, onClose }) {
 
 function ProjectMediaGrid({ project, onOpen }) {
   const items = useMemo(() => {
+    if (project?.project_type === 'live' || project?.project_type === undefined) {
+      if (project?.thumbnail) {
+        return [{ src: normalizeMediaUrl(project.thumbnail), caption: '' }]
+      }
+      return []
+    }
+
     if (Array.isArray(project?.image_items) && project.image_items.length > 0) {
       return project.image_items
         .slice()
@@ -179,6 +186,13 @@ function chunkByTwo(items) {
 
 function ProjectMediaCarousel({ project, onOpen }) {
   const items = useMemo(() => {
+    if (project?.project_type === 'live' || project?.project_type === undefined) {
+      if (project?.thumbnail) {
+        return [{ src: normalizeMediaUrl(project.thumbnail), caption: '' }]
+      }
+      return []
+    }
+
     if (Array.isArray(project?.image_items) && project.image_items.length > 0) {
       return project.image_items
         .slice()

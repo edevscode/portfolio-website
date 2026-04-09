@@ -1,7 +1,7 @@
 import React from 'react'
 import './Form.css'
 
- export function FormField({ label, name, type = 'text', value, onChange, placeholder, required, error, rows, accept, multiple }) {
+ export function FormField({ label, name, type = 'text', value, onChange, placeholder, required, error, rows, accept, multiple, options }) {
   return (
     <div className="form-field">
       {label && (
@@ -21,8 +21,8 @@ import './Form.css'
         />
       ) : type === 'select' ? (
         <select name={name} value={value} onChange={onChange} required={required}>
-          {Array.isArray(onChange?.options) &&
-            onChange.options.map((opt) => (
+          {Array.isArray(options) &&
+            options.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>

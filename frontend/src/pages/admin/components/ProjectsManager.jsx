@@ -14,6 +14,7 @@ export default function ProjectsManager() {
     description: '',
     url: '',
     github_url: '',
+    project_type: 'live',
     is_featured: false,
     is_published: true,
     order: 0,
@@ -76,6 +77,7 @@ export default function ProjectsManager() {
       description: '',
       url: '',
       github_url: '',
+      project_type: 'live',
       is_featured: false,
       is_published: true,
       order: 0,
@@ -213,6 +215,7 @@ export default function ProjectsManager() {
       data.append('description', formData.description || '')
       data.append('url', formData.url || '')
       data.append('github_url', formData.github_url || '')
+      data.append('project_type', formData.project_type || 'live')
       data.append('order', String(formData.order ?? 0))
       data.append('is_featured', String(!!formData.is_featured))
       data.append('is_published', String(!!formData.is_published))
@@ -314,6 +317,17 @@ export default function ProjectsManager() {
             onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
           />
           <FormField
+            label="Project Type"
+            name="project_type"
+            type="select"
+            value={formData.project_type || 'live'}
+            onChange={(e) => setFormData({ ...formData, project_type: e.target.value })}
+            options={[
+              { value: 'live', label: 'Live Site / Web App' },
+              { value: 'local', label: 'Local Project / Gallery' }
+            ]}
+          />
+          <FormField
             label="Order"
             type="number"
             value={formData.order}
@@ -338,8 +352,9 @@ export default function ProjectsManager() {
             </label>
           </div>
 
-          <div className="form-field">
-            <label>Project Images</label>
+          {formData.project_type === 'local' && (
+            <div className="form-field">
+              <label>Project Images</label>
             <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
               <input type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} />
             </div>
@@ -414,9 +429,10 @@ export default function ProjectsManager() {
                 </div>
               </div>
             ) : null}
-          </div>
+            </div>
+          )}
 
-          {editingId && (
+          {editingId && formData.project_type === 'local' && (
             <div className="checkbox-group">
               <label>
                 <input
