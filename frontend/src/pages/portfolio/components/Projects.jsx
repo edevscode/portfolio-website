@@ -215,37 +215,39 @@ export default function Projects({ projects }) {
                         </div>
                       </div>
                       <div className="summary-card-content">
-                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                          <h3 style={{ margin: 0, color: colors.primary }}>{project.title}</h3>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            {project.url && (
-                              <a 
-                                href={project.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="pill-btn"
-                                onClick={(e) => e.stopPropagation()}
-                                style={{ backgroundColor: colors.accent, color: colors.background, padding: '6px 12px', fontSize: '12px' }}
-                              >
-                                Live Site
-                              </a>
-                            )}
-                            {project.github_url && (
-                              <a 
-                                href={project.github_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="pill-btn"
-                                onClick={(e) => e.stopPropagation()}
-                                style={{ backgroundColor: colors.primary, color: colors.background, padding: '6px 12px', fontSize: '12px' }}
-                              >
-                                GitHub
-                              </a>
-                            )}
-                          </div>
+                        <h3 style={{ margin: '0 0 12px 0', color: colors.primary, wordBreak: 'break-word' }}>
+                          {project.title}
+                        </h3>
+                        
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                          {project.url && (
+                            <a 
+                              href={project.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="pill-btn"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ backgroundColor: colors.accent, color: colors.background, padding: '6px 16px', fontSize: '13px' }}
+                            >
+                              View
+                            </a>
+                          )}
+                          {project.github_url && (
+                            <a 
+                              href={project.github_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="pill-btn"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ backgroundColor: '#0056b3', color: 'white', padding: '6px 16px', fontSize: '13px' }}
+                            >
+                              GitHub
+                            </a>
+                          )}
                         </div>
+
                         {project.description && (
-                          <pre className="summary-card-description" style={{ color: colors.text, marginTop: '8px' }}>
+                          <pre className="summary-card-description" style={{ color: colors.text, margin: 0 }}>
                             {project.description}
                           </pre>
                         )}
