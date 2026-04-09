@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { API_BASE_URL } from '../../../services/apiService'
@@ -124,176 +125,10 @@ function ImageModal({ open, image, onClose }) {
   )
 }
 
-function ProjectMediaGrid({ project, onOpen }) {
-  const items = useMemo(() => {
-    if (project?.project_type === 'live' || project?.project_type === undefined) {
-      if (project?.thumbnail) {
-        return [{ src: normalizeMediaUrl(project.thumbnail), caption: '' }]
-      }
-      return []
-    }
-
-    if (Array.isArray(project?.image_items) && project.image_items.length > 0) {
-      return project.image_items
-        .slice()
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((it) => ({ src: normalizeMediaUrl(it.image), caption: it.caption || '' }))
-    }
-
-    if (Array.isArray(project?.images) && project.images.length > 0) {
-      return project.images.map((src) => ({ src: normalizeMediaUrl(src), caption: '' }))
-    }
-
-    if (project?.thumbnail) {
-      return [{ src: normalizeMediaUrl(project.thumbnail), caption: '' }]
-    }
-
-    return []
-  }, [project])
-
-  if (items.length === 0) {
-    return <div className="project-media__grid" />
-  }
-
-  return (
-    <div className="project-media__grid">
-      {items.map((it, idx) => (
-        <button
-          key={idx}
-          type="button"
-          className="project-media__tile"
-          onClick={() => onOpen?.({ src: it.src, caption: it.caption || '', alt: project?.title || 'Project image' })}
-        >
-          <img src={it.src} alt={project?.title || 'Project image'} />
-          {it.caption ? (
-            <div className="project-media__caption" title={it.caption}>
-              {it.caption}
-            </div>
-          ) : null}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function chunkByTwo(items) {
-  const pages = []
-  for (let i = 0; i < items.length; i += 2) {
-    pages.push(items.slice(i, i + 2))
-  }
-  return pages
-}
-
-function ProjectMediaCarousel({ project, onOpen }) {
-  const items = useMemo(() => {
-    if (project?.project_type === 'live' || project?.project_type === undefined) {
-      if (project?.thumbnail) {
-        return [{ src: normalizeMediaUrl(project.thumbnail), caption: '' }]
-      }
-      return []
-    }
-
-    if (Array.isArray(project?.image_items) && project.image_items.length > 0) {
-      return project.image_items
-        .slice()
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((it) => ({ src: normalizeMediaUrl(it.image), caption: it.caption || '' }))
-    }
-
-    if (Array.isArray(project?.images) && project.images.length > 0) {
-      return project.images.map((src) => ({ src: normalizeMediaUrl(src), caption: '' }))
-    }
-
-    if (project?.thumbnail) {
-      return [{ src: normalizeMediaUrl(project.thumbnail), caption: '' }]
-    }
-
-    return []
-  }, [project])
-
-  const pages = useMemo(() => chunkByTwo(items), [items])
-  const [pageIndex, setPageIndex] = useState(0)
-
-  if (items.length === 0) {
-    return <div className="project-media__carousel" />
-  }
-
-  if (items.length === 1) {
-    return <ProjectMediaGrid project={project} onOpen={onOpen} />
-  }
-
-  const canNavigate = pages.length > 1
-  const safePageIndex = Math.min(pageIndex, pages.length - 1)
-
-  const goPrev = (e) => {
-    e.preventDefault()
-    setPageIndex((i) => (i - 1 + pages.length) % pages.length)
-  }
-
-  const goNext = (e) => {
-    e.preventDefault()
-    setPageIndex((i) => (i + 1) % pages.length)
-  }
-
-  const goTo = (e, idx) => {
-    e.preventDefault()
-    setPageIndex(idx)
-  }
-
-  return (
-    <div className="project-media__carousel">
-      <div className="project-media__viewport">
-        <div className="project-media__track" style={{ transform: `translateX(-${safePageIndex * 100}%)` }}>
-          {pages.map((page, pIdx) => (
-            <div key={pIdx} className="project-media__page">
-              {page.map((it, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className="project-media__tile"
-                  onClick={() => onOpen?.({ src: it.src, caption: it.caption || '', alt: project?.title || 'Project image' })}
-                >
-                  <img src={it.src} alt={project?.title || 'Project image'} />
-                  {it.caption ? (
-                    <div className="project-media__caption" title={it.caption}>
-                      {it.caption}
-                    </div>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {canNavigate ? (
-        <>
-          <button type="button" className="project-media__nav project-media__nav--prev" onClick={goPrev} aria-label="Previous images">
-            ‹
-          </button>
-          <button type="button" className="project-media__nav project-media__nav--next" onClick={goNext} aria-label="Next images">
-            ›
-          </button>
-          <div className="project-media__dots" aria-label="Image pages">
-            {pages.map((_, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className={idx === safePageIndex ? 'project-media__dot is-active' : 'project-media__dot'}
-                onClick={(e) => goTo(e, idx)}
-                aria-label={`Go to images ${idx + 1}`}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
-    </div>
-  )
-}
-
 export default function Projects({ projects }) {
   const { config: seasonConfig } = useSeasonContext()
   const { theme } = useTheme()
+  const navigate = useNavigate()
 
   const colors = theme ? {
     primary: theme.primary_color || seasonConfig?.colors?.primary || '#1a472a',
@@ -404,58 +239,41 @@ export default function Projects({ projects }) {
               )}
 
               {localProjects.length > 0 && (
-                <div className="projects-list">
-                  {localProjects.map((project, index) => (
-                    <div key={project.id} className={`local-project-zigzag ${index % 2 !== 0 ? 'reverse' : ''}`}>
-                      <div
-                        className="zigzag-details"
-                        style={{
-                          borderColor: colors.accent,
-                          backgroundColor: colors.secondary,
-                        }}
-                      >
-                        <h3 style={{ color: colors.primary }}>{project.title}</h3>
-                        
-                        <div className="zigzag-links">
-                          {project.url && (
-                            <a
-                              href={project.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="pill-btn"
-                              style={{ backgroundColor: colors.accent, color: colors.background }}
-                            >
-                              Live Site
-                            </a>
-                          )}
-                          {project.github_url && (
-                            <a
-                              href={project.github_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="pill-btn"
-                              style={{ backgroundColor: colors.primary, color: colors.background }}
-                            >
-                              GitHub
-                            </a>
-                          )}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                  gap: '30px'
+                }}>
+                  {localProjects.map((project) => (
+                    <div 
+                      key={project.id} 
+                      className="local-project-summary-card"
+                      onClick={() => navigate(`/project/${project.slug || project.id}`)}
+                      style={{
+                        borderColor: colors.accent,
+                        backgroundColor: colors.secondary,
+                      }}
+                    >
+                      <div className="summary-card-image" style={{ background: 'rgba(0,0,0,0.04)' }}>
+                        {project.thumbnail ? (
+                          <img 
+                            src={normalizeMediaUrl(project.thumbnail)} 
+                            alt={project.title} 
+                          />
+                        ) : (
+                          <div className="glass-placeholder">No Image</div>
+                        )}
+                        <div className="summary-card-overlay">
+                          <span>View Gallery</span>
                         </div>
-
-                        {project.description ? (
-                          <pre className="zigzag-description" style={{ color: colors.text }}>
+                      </div>
+                      <div className="summary-card-content">
+                        <h3 style={{ color: colors.primary }}>{project.title}</h3>
+                        {project.description && (
+                          <pre className="summary-card-description" style={{ color: colors.text }}>
                             {project.description}
                           </pre>
-                        ) : null}
-                      </div>
-
-                      <div
-                        className="zigzag-media"
-                        style={{
-                          borderColor: colors.accent,
-                          backgroundColor: colors.secondary,
-                        }}
-                      >
-                        <ProjectMediaCarousel project={project} onOpen={openImage} />
+                        )}
                       </div>
                     </div>
                   ))}
