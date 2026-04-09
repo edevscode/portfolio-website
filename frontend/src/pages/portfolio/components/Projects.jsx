@@ -328,7 +328,7 @@ export default function Projects({ projects }) {
     }}>
       <ImageModal open={isModalOpen} image={modalImage} onClose={closeImage} />
       <div className="container">
-        <h2 style={{ color: colors.primary }}>Featured Projects</h2>
+        <h2 className="projects-title" style={{ color: colors.primary }}>Featured Projects</h2>
 
         {(() => {
           const liveProjects = projects ? projects.filter(p => p.project_type === 'live' || p.project_type === undefined) : []
@@ -339,92 +339,64 @@ export default function Projects({ projects }) {
               {liveProjects.length > 0 && (
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-                  gap: '32px',
-                  marginBottom: localProjects.length > 0 ? '60px' : '0'
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                  gap: '40px',
+                  marginBottom: localProjects.length > 0 ? '80px' : '0'
                 }}>
                   {liveProjects.map((project) => (
                     <div 
                       key={project.id} 
-                      className="project-card" 
+                      className="live-project-glass-card" 
                       style={{
-                        backgroundColor: colors.secondary,
-                        border: `1px solid ${colors.accent}`,
-                        borderRadius: '16px',
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100%'
+                        borderColor: colors.accent,
+                        boxShadow: `0 8px 32px ${colors.accent}15`
                       }}
                     >
-                      <div className="project-image" style={{ height: '240px', background: 'rgba(0,0,0,0.04)', flexShrink: 0 }}>
+                      <div className="glass-card-bg">
                         {project.thumbnail ? (
                           <img 
                             src={normalizeMediaUrl(project.thumbnail)} 
                             alt={project.title} 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
                           />
                         ) : (
-                          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+                          <div className="glass-placeholder" style={{ backgroundColor: colors.secondary, color: colors.text }}>
                             No Image
                           </div>
                         )}
                       </div>
-                      <div className="project-info" style={{ padding: '24px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                        <h3 style={{ margin: '0 0 16px 0', color: colors.primary, fontSize: '22px', lineHeight: 1.3 }}>{project.title}</h3>
-                        
+                      <div className="glass-card-content" style={{ backgroundColor: `${colors.secondary}cc` }}>
+                        <div className="glass-card-header">
+                          <h3 style={{ color: colors.primary }}>{project.title}</h3>
+                          <div className="glass-card-links">
+                            {project.url && (
+                              <a 
+                                href={project.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="pill-btn"
+                                style={{ backgroundColor: colors.accent, color: colors.background }}
+                              >
+                                Live Site
+                              </a>
+                            )}
+                            {project.github_url && (
+                              <a 
+                                href={project.github_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="pill-btn"
+                                style={{ backgroundColor: colors.primary, color: colors.background }}
+                              >
+                                GitHub
+                              </a>
+                            )}
+                          </div>
+                        </div>
                         {project.description && (
-                          <pre style={{ margin: '0 0 24px 0', color: colors.text, whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: '15px', lineHeight: '1.6', flex: 1, opacity: 0.9 }}>
+                          <pre className="glass-card-description" style={{ color: colors.text }}>
                             {project.description}
                           </pre>
                         )}
-                        
-                        <div className="project-links" style={{ display: 'flex', gap: '12px', marginTop: 'auto', flexWrap: 'wrap' }}>
-                          {project.url && (
-                            <a 
-                              href={project.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              style={{ 
-                                padding: '10px 20px', 
-                                borderRadius: '10px', 
-                                textDecoration: 'none', 
-                                backgroundColor: colors.accent, 
-                                color: colors.background, 
-                                fontWeight: '600',
-                                fontSize: '14px',
-                                textAlign: 'center',
-                                flex: 1,
-                                minWidth: 'fit-content'
-                              }}
-                            >
-                              Live Site
-                            </a>
-                          )}
-                          {project.github_url && (
-                            <a 
-                              href={project.github_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              style={{ 
-                                padding: '10px 20px', 
-                                borderRadius: '10px', 
-                                textDecoration: 'none', 
-                                backgroundColor: colors.primary, 
-                                color: colors.background, 
-                                fontWeight: '600',
-                                fontSize: '14px',
-                                textAlign: 'center',
-                                flex: 1,
-                                minWidth: 'fit-content'
-                              }}
-                            >
-                              GitHub
-                            </a>
-                          )}
-                        </div>
                       </div>
                     </div>
                   ))}
@@ -433,56 +405,51 @@ export default function Projects({ projects }) {
 
               {localProjects.length > 0 && (
                 <div className="projects-list">
-                  {localProjects.map((project) => (
-                    <div key={project.id} className="project-row">
+                  {localProjects.map((project, index) => (
+                    <div key={project.id} className={`local-project-zigzag ${index % 2 !== 0 ? 'reverse' : ''}`}>
                       <div
-                        className="project-details"
+                        className="zigzag-details"
                         style={{
                           borderColor: colors.accent,
                           backgroundColor: colors.secondary,
                         }}
                       >
-                        <div className="project-details__header">
-                          <h3 style={{ color: colors.primary }}>{project.title}</h3>
-                          <div className="project-details__links">
-                            {project.url && (
-                              <a
-                                href={project.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  backgroundColor: colors.accent,
-                                  color: colors.background,
-                                }}
-                              >
-                                Live Site
-                              </a>
-                            )}
-                            {project.github_url && (
-                              <a
-                                href={project.github_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  backgroundColor: colors.primary,
-                                  color: colors.background,
-                                }}
-                              >
-                                GitHub
-                              </a>
-                            )}
-                          </div>
+                        <h3 style={{ color: colors.primary }}>{project.title}</h3>
+                        
+                        <div className="zigzag-links">
+                          {project.url && (
+                            <a
+                              href={project.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="pill-btn"
+                              style={{ backgroundColor: colors.accent, color: colors.background }}
+                            >
+                              Live Site
+                            </a>
+                          )}
+                          {project.github_url && (
+                            <a
+                              href={project.github_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="pill-btn"
+                              style={{ backgroundColor: colors.primary, color: colors.background }}
+                            >
+                              GitHub
+                            </a>
+                          )}
                         </div>
 
                         {project.description ? (
-                          <pre className="project-details__description" style={{ color: colors.text }}>
+                          <pre className="zigzag-description" style={{ color: colors.text }}>
                             {project.description}
                           </pre>
                         ) : null}
                       </div>
 
                       <div
-                        className="project-media"
+                        className="zigzag-media"
                         style={{
                           borderColor: colors.accent,
                           backgroundColor: colors.secondary,
