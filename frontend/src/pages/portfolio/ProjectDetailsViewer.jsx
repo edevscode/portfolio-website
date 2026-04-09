@@ -84,12 +84,24 @@ function ImageModal({ open, image, onClose }) {
   }
 
   const stopDragging = () => {
+    // If we've barely moved, we could consider it a click, but we can just handle click directly on the stage.
     setDragging(false)
   }
 
-  const handleDoubleClick = () => {
-    setZoom(1)
-    setOffset({ x: 0, y: 0 })
+  const handleStageClick = (e) => {
+    // If we dragged, don't trigger a click
+    if (Math.abs(e.clientX - dragStart.x) > 5 || Math.abs(e.clientY - dragStart.y) > 5) {
+      return
+    }
+    
+    // Toggle zoom
+    if (zoom > 1) {
+      setZoom(1)
+      setOffset({ x: 0, y: 0 })
+    } else {
+      setZoom(2.5)
+      // Ideally we zoom into the clicked point, but for simplicity, center zoom is fine.
+    }
   }
 
   return (
@@ -100,17 +112,18 @@ function ImageModal({ open, image, onClose }) {
         </button>
         <div className="project-image-modal__hud" aria-hidden="true">
           <div className="project-image-modal__zoom">{Math.round(zoom * 100)}%</div>
-          <div className="project-image-modal__hint">Scroll to zoom • Drag to pan • Double-click to reset</div>
+          <div className="project-image-modal__hint">Click or scroll to zoom • Drag to pan</div>
         </div>
         <div
           className={dragging ? 'project-image-modal__stage is-dragging' : 'project-image-modal__stage'}
+          style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
           onWheel={handleWheel}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={stopDragging}
           onPointerCancel={stopDragging}
           onPointerLeave={stopDragging}
-          onDoubleClick={handleDoubleClick}
+          onClick={handleStageClick}
         >
           <img
             src={image.src}
