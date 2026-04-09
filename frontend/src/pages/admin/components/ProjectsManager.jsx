@@ -302,13 +302,13 @@ export default function ProjectsManager() {
             required
           />
           <FormField
-            label="Project URL"
+            label="Live Link"
             type="url"
             value={formData.url}
             onChange={(e) => setFormData({ ...formData, url: e.target.value })}
           />
           <FormField
-            label="GitHub URL"
+            label="GitHub Repo (Optional)"
             type="url"
             value={formData.github_url}
             onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}

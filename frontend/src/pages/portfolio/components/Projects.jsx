@@ -339,7 +339,7 @@ export default function Projects({ projects }) {
                           color: colors.background,
                         }}
                       >
-                        View
+                        Live Site
                       </a>
                     )}
                     {project.github_url && (
