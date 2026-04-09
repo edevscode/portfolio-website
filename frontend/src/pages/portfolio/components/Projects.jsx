@@ -185,42 +185,51 @@ export default function Projects({ projects }) {
               {liveProjects.length > 0 && (
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-                  gap: '40px',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                  gap: '30px',
                   marginBottom: localProjects.length > 0 ? '80px' : '0'
                 }}>
                   {liveProjects.map((project) => (
                     <div 
                       key={project.id} 
-                      className="live-project-glass-card" 
+                      className="local-project-summary-card" 
                       style={{
                         borderColor: colors.accent,
-                        boxShadow: `0 8px 32px ${colors.accent}15`
+                        backgroundColor: colors.secondary,
                       }}
                     >
-                      <div className="glass-card-bg">
+                      <div className="summary-card-image" style={{ background: 'rgba(0,0,0,0.04)' }}>
                         {project.thumbnail ? (
                           <img 
                             src={normalizeMediaUrl(project.thumbnail)} 
                             alt={project.title} 
                           />
                         ) : (
-                          <div className="glass-placeholder" style={{ backgroundColor: colors.secondary, color: colors.text }}>
+                          <div className="glass-placeholder" style={{ color: colors.text }}>
                             No Image
                           </div>
                         )}
+                        {project.url ? (
+                          <a href={project.url} target="_blank" rel="noopener noreferrer" className="summary-card-overlay" style={{ textDecoration: 'none' }}>
+                            <span>Visit Site</span>
+                          </a>
+                        ) : (
+                          <div className="summary-card-overlay">
+                            <span>Featured</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="glass-card-content" style={{ backgroundColor: `${colors.secondary}cc` }}>
-                        <div className="glass-card-header">
-                          <h3 style={{ color: colors.primary }}>{project.title}</h3>
-                          <div className="glass-card-links">
+                      <div className="summary-card-content">
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                          <h3 style={{ margin: 0, color: colors.primary }}>{project.title}</h3>
+                          <div style={{ display: 'flex', gap: '8px' }}>
                             {project.url && (
                               <a 
                                 href={project.url} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className="pill-btn"
-                                style={{ backgroundColor: colors.accent, color: colors.background }}
+                                style={{ backgroundColor: colors.accent, color: colors.background, padding: '6px 12px', fontSize: '12px' }}
                               >
                                 Live Site
                               </a>
@@ -231,7 +240,7 @@ export default function Projects({ projects }) {
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className="pill-btn"
-                                style={{ backgroundColor: colors.primary, color: colors.background }}
+                                style={{ backgroundColor: colors.primary, color: colors.background, padding: '6px 12px', fontSize: '12px' }}
                               >
                                 GitHub
                               </a>
@@ -239,7 +248,7 @@ export default function Projects({ projects }) {
                           </div>
                         </div>
                         {project.description && (
-                          <pre className="glass-card-description" style={{ color: colors.text }}>
+                          <pre className="summary-card-description" style={{ color: colors.text, marginTop: '8px' }}>
                             {project.description}
                           </pre>
                         )}
