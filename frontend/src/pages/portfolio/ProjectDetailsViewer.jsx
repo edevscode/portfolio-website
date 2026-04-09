@@ -276,7 +276,7 @@ export default function ProjectDetailsViewer() {
           </section>
         )}
 
-        {items.length > 0 && (
+        {items.length > 0 && project.project_type === 'local' && (
           <section className="project-details-gallery">
             <h2 style={{ color: colors.primary }}>Project Gallery</h2>
             <div className="gallery-grid">

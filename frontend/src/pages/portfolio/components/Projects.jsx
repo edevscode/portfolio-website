@@ -193,6 +193,7 @@ export default function Projects({ projects }) {
                     <div 
                       key={project.id} 
                       className="local-project-summary-card" 
+                      onClick={() => navigate(`/project/${project.slug || project.id}`)}
                       style={{
                         borderColor: colors.accent,
                         backgroundColor: colors.secondary,
@@ -209,15 +210,9 @@ export default function Projects({ projects }) {
                             No Image
                           </div>
                         )}
-                        {project.url ? (
-                          <a href={project.url} target="_blank" rel="noopener noreferrer" className="summary-card-overlay" style={{ textDecoration: 'none' }}>
-                            <span>Visit Site</span>
-                          </a>
-                        ) : (
-                          <div className="summary-card-overlay">
-                            <span>Featured</span>
-                          </div>
-                        )}
+                        <div className="summary-card-overlay">
+                          <span>View Details</span>
+                        </div>
                       </div>
                       <div className="summary-card-content">
                         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
@@ -229,6 +224,7 @@ export default function Projects({ projects }) {
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className="pill-btn"
+                                onClick={(e) => e.stopPropagation()}
                                 style={{ backgroundColor: colors.accent, color: colors.background, padding: '6px 12px', fontSize: '12px' }}
                               >
                                 Live Site
@@ -240,6 +236,7 @@ export default function Projects({ projects }) {
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className="pill-btn"
+                                onClick={(e) => e.stopPropagation()}
                                 style={{ backgroundColor: colors.primary, color: colors.background, padding: '6px 12px', fontSize: '12px' }}
                               >
                                 GitHub
