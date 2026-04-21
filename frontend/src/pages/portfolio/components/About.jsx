@@ -28,10 +28,17 @@ export default function About({ about }) {
       src = `${origin}${src.startsWith('/') ? '' : '/'}${src}`
     }
 
-    // Cloudinary specific fix: Ensure .pdf extension is present
-    if (src.includes('cloudinary.com') && !src.toLowerCase().endsWith('.pdf')) {
-      // Remove any trailing slash before appending
-      src = src.replace(/\/$/, '') + '.pdf'
+    // Cloudinary Smart Fix
+    if (src.includes('cloudinary.com')) {
+      // Ensure .pdf extension is present for Cloudinary to serve it correctly
+      if (!src.toLowerCase().endsWith('.pdf')) {
+        src = src.replace(/\/$/, '') + '.pdf'
+      }
+
+      // Sometimes PDFs are uploaded as 'raw' but served as 'image'. 
+      // If image/upload is failing with 401, trying to point to the file directly can help.
+      // We'll keep the extension and ensure the path is clean.
+      src = src.replace('/image/upload/', '/image/upload/fl_attachment/')
     }
     
     return src
