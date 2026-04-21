@@ -19,11 +19,22 @@ export default function About({ about }) {
   })()
 
   const resumeFileUrl = (() => {
-    const src = about?.resume_file
+    let src = about?.resume_file
     if (!src) return ''
-    if (/^https?:\/\//i.test(src)) return src
-    const origin = new URL(API_BASE_URL).origin
-    return `${origin}${src.startsWith('/') ? '' : '/'}${src}`
+    
+    // Construct full URL if it's a relative path
+    if (!/^https?:\/\//i.test(src)) {
+      const origin = new URL(API_BASE_URL).origin
+      src = `${origin}${src.startsWith('/') ? '' : '/'}${src}`
+    }
+
+    // Cloudinary specific fix: Ensure .pdf extension is present
+    if (src.includes('cloudinary.com') && !src.toLowerCase().endsWith('.pdf')) {
+      // Remove any trailing slash before appending
+      src = src.replace(/\/$/, '') + '.pdf'
+    }
+    
+    return src
   })()
 
   const colors = theme ? {
