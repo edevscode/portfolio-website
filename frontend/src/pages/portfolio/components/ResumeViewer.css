@@ -1,0 +1,114 @@
+.resume-viewer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.resume-viewer-container {
+  width: 100%;
+  max-width: 900px;
+  height: 90vh;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.resume-viewer-header {
+  padding: 15px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: #fcfcfc;
+}
+
+.resume-viewer-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.resume-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.resume-download-btn {
+  padding: 8px 20px;
+  border-radius: 100px;
+  color: white;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.resume-download-btn:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+.resume-close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.resume-close-btn:hover {
+  color: #000;
+}
+
+.resume-viewer-body {
+  flex: 1;
+  background: #525659; /* Standard PDF viewer background */
+}
+
+.resume-viewer-body iframe {
+  border: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .resume-viewer-container {
+    height: 100%;
+    border-radius: 0;
+  }
+  
+  .resume-viewer-overlay {
+    padding: 0;
+  }
+
+  .resume-viewer-header h3 {
+    font-size: 1rem;
+  }
+}

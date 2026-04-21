@@ -63,3 +63,35 @@
     width: 100%;
   }
 }
+
+.about-actions {
+  margin-top: 24px;
+}
+
+.view-resume-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 100px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.view-resume-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  opacity: 0.9;
+}
+
+.view-resume-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.view-resume-btn:hover svg {
+  transform: scale(1.1);
+}
