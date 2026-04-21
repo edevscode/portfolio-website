@@ -27,28 +27,22 @@ export default function Skills({ skills }) {
       backgroundColor: colors.background
     }}>
       <div className="container">
-        <h2 style={{ color: colors.primary }}>Skills</h2>
-        <div className="skills-wrapper">
-          <div className="skill-list">
-            {list.map((skill) => (
-              <div key={skill.id} className="skill-item">
-                <div className="skill-name" style={{ color: colors.text }}>
-                  {skill.name}
-                </div>
-                <div className="skill-bar" style={{
-                  backgroundColor: colors.secondary
-                }}>
-                  <div className="skill-progress" style={{ 
-                    width: `${skill.proficiency}%`,
-                    backgroundColor: colors.accent
-                  }}></div>
-                </div>
-                <span className="skill-percent" style={{ color: colors.text }}>
-                  {skill.proficiency}%
-                </span>
-              </div>
-            ))}
-          </div>
+        <h2 style={{ color: colors.primary }}>Skills & Expertise</h2>
+        <div className="skills-container">
+          {list.map((skill) => (
+            <div 
+              key={skill.id} 
+              className="skill-badge"
+              style={{ 
+                '--accent': colors.accent,
+                '--primary': colors.primary,
+                '--text': colors.text,
+                '--secondary': colors.secondary
+              }}
+            >
+              <span className="skill-name">{skill.name}</span>
+            </div>
+          ))}
         </div>
       </div>
     </section>
