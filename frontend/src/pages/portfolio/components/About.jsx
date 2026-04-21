@@ -19,29 +19,13 @@ export default function About({ about }) {
   })()
 
   const resumeFileUrl = (() => {
-    let src = about?.resume_file
+    const src = about?.resume_file
     if (!src) return ''
     
     // Construct full URL if it's a relative path
     if (!/^https?:\/\//i.test(src)) {
       const origin = new URL(API_BASE_URL).origin
-      src = `${origin}${src.startsWith('/') ? '' : '/'}${src}`
-    }
-
-    // Cloudinary Smart Fix
-    if (src.includes('cloudinary.com')) {
-      // Ensure .pdf extension is present
-      if (!src.toLowerCase().endsWith('.pdf')) {
-        src = src.replace(/\/$/, '') + '.pdf'
-      }
-
-      // PDFs can be served as 'image' or 'raw'. 
-      // If 'image' is failing, 'raw' is the more direct way to serve a file without transformations.
-      if (src.includes('/image/upload/')) {
-        src = src.replace('/image/upload/', '/raw/upload/')
-        // Remove fl_attachment when using raw as it's an image transformation flag
-        src = src.replace('fl_attachment/', '')
-      }
+      return `${origin}${src.startsWith('/') ? '' : '/'}${src}`
     }
     
     return src
