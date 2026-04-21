@@ -30,15 +30,18 @@ export default function About({ about }) {
 
     // Cloudinary Smart Fix
     if (src.includes('cloudinary.com')) {
-      // Ensure .pdf extension is present for Cloudinary to serve it correctly
+      // Ensure .pdf extension is present
       if (!src.toLowerCase().endsWith('.pdf')) {
         src = src.replace(/\/$/, '') + '.pdf'
       }
 
-      // Sometimes PDFs are uploaded as 'raw' but served as 'image'. 
-      // If image/upload is failing with 401, trying to point to the file directly can help.
-      // We'll keep the extension and ensure the path is clean.
-      src = src.replace('/image/upload/', '/image/upload/fl_attachment/')
+      // PDFs can be served as 'image' or 'raw'. 
+      // If 'image' is failing, 'raw' is the more direct way to serve a file without transformations.
+      if (src.includes('/image/upload/')) {
+        src = src.replace('/image/upload/', '/raw/upload/')
+        // Remove fl_attachment when using raw as it's an image transformation flag
+        src = src.replace('fl_attachment/', '')
+      }
     }
     
     return src
