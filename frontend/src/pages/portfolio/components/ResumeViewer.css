@@ -81,11 +81,61 @@
 
 .resume-viewer-body {
   flex: 1;
-  background: #525659; /* Standard PDF viewer background */
+  background: #525659;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.resume-viewer-body iframe {
+.resume-object {
   border: none;
+  display: block;
+}
+
+.resume-viewer-fallback {
+  text-align: center;
+  color: white;
+  padding: 40px;
+  max-width: 400px;
+}
+
+.resume-fallback-link {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: white;
+  color: #000;
+  text-decoration: none;
+  border-radius: 100px;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.resume-fallback-link:hover {
+  transform: translateY(-2px);
+}
+
+.resume-viewer-footer {
+  padding: 12px 25px;
+  background: #fcfcfc;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.resume-viewer-footer p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.resume-viewer-footer a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.resume-viewer-footer a:hover {
+  text-decoration: underline;
 }
 
 @keyframes fadeIn {

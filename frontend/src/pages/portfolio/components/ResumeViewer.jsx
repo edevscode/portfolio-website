@@ -28,12 +28,23 @@ export default function ResumeViewer({ url, onClose, colors }) {
           </div>
         </div>
         <div className="resume-viewer-body">
-          <iframe 
-            src={`${url}#toolbar=0`} 
-            title="Resume Viewer"
+          <object 
+            data={`${url}#toolbar=0&navpanes=0`} 
+            type="application/pdf" 
             width="100%" 
             height="100%"
-          />
+            className="resume-object"
+          >
+            <div className="resume-viewer-fallback">
+              <p>It looks like your browser or an extension is blocking the PDF viewer.</p>
+              <a href={url} target="_blank" rel="noopener noreferrer" className="resume-fallback-link">
+                Open Resume in New Tab
+              </a>
+            </div>
+          </object>
+        </div>
+        <div className="resume-viewer-footer">
+          <p>Trouble viewing? <a href={url} target="_blank" rel="noopener noreferrer">Click here to open in a new tab</a></p>
         </div>
       </div>
     </div>
