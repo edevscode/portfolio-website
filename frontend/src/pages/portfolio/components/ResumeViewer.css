@@ -153,12 +153,36 @@
     height: 100%;
     border-radius: 0;
   }
-  
+
   .resume-viewer-overlay {
     padding: 0;
   }
 
   .resume-viewer-header h3 {
     font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .resume-viewer-header {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .resume-viewer-actions {
+    gap: 8px;
+  }
+
+  .resume-download-btn {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+
+  .resume-close-btn {
+    font-size: 1.6rem;
+  }
+
+  .resume-viewer-footer {
+    padding: 10px 14px;
   }
 }

@@ -96,3 +96,25 @@
     font-size: 14px;
   }
 }
+
+@media (max-width: 480px) {
+  .skills {
+    padding: 48px 16px;
+  }
+
+  .skills h2 {
+    margin-bottom: 32px;
+  }
+
+  .skills-container {
+    gap: 10px;
+  }
+
+  .skill-badge {
+    padding: 9px 18px;
+  }
+
+  .skill-name {
+    font-size: 13px;
+  }
+}

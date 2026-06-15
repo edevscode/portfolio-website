@@ -64,6 +64,38 @@
   }
 }
 
+@media (max-width: 768px) {
+  .about {
+    padding: 50px 20px;
+  }
+
+  .about-avatar {
+    width: min(220px, 75vw);
+    height: min(220px, 75vw);
+  }
+}
+
+@media (max-width: 480px) {
+  .about {
+    padding: 40px 16px;
+  }
+
+  .about-avatar {
+    width: min(180px, 70vw);
+    height: min(180px, 70vw);
+    border-radius: 14px;
+  }
+
+  .about-block {
+    padding: 14px;
+  }
+
+  .view-resume-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .about-actions {
   margin-top: 24px;
 }

@@ -145,3 +145,41 @@
     grid-column: 2;
   }
 }
+
+@media (max-width: 480px) {
+  .experience {
+    padding: 40px 16px;
+  }
+
+  .experience h2 {
+    font-size: 24px;
+    margin-bottom: 36px;
+  }
+
+  .timeline::before {
+    left: 22px;
+  }
+
+  .timeline-item {
+    grid-template-columns: 22px 1fr;
+    column-gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .timeline-marker::before {
+    width: 12px;
+    height: 12px;
+  }
+
+  .timeline-content {
+    padding: 14px;
+  }
+
+  .timeline-content h3 {
+    font-size: 15px;
+  }
+
+  .timeline-content h4 {
+    font-size: 13px;
+  }
+}

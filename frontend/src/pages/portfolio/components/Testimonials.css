@@ -13,6 +13,7 @@
   margin: 0 0 28px 0;
   color: var(--primary-color);
   text-align: center;
+  font-size: clamp(1.5rem, 4vw, 2rem);
 }
 
 .testimonials .empty {
@@ -77,8 +78,37 @@
   }
 }
 
+@media (max-width: 768px) {
+  .testimonials {
+    padding: 50px 20px;
+  }
+}
+
 @media (max-width: 650px) {
   .testimonials-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .testimonials {
+    padding: 40px 16px;
+  }
+
+  .testimonials h2 {
+    margin-bottom: 20px;
+  }
+
+  .testimonial-card {
+    padding: 14px;
+  }
+
+  .client-name {
+    font-size: 14px;
+  }
+
+  .quote {
+    font-size: 14px;
+    line-height: 1.6;
   }
 }
