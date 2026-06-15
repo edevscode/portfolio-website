@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { apiService, API_BASE_URL } from '../../services/apiService'
+import { cache, CACHE_KEYS, CACHE_TTL } from '../../services/cache'
 import { useTheme } from '../../context/ThemeContext'
 import { useSeasonContext } from '../../context/useSeasonContext'
 import { SeasonalBackground } from '../../features/seasonal/components/SeasonalEffects'
@@ -171,11 +172,45 @@ export default function ProjectDetailsViewer() {
   }, [slug])
 
   const loadData = async () => {
+    const slugStr = String(slug)
+    const cachedProject = cache.get(CACHE_KEYS.project(slugStr))
+    const cachedPortfolio = cache.get(CACHE_KEYS.portfolio)
+
+    if (cachedProject) {
+      // Instant render — data was prefetched
+      setProject(cachedProject)
+      setLoading(false)
+      if (cachedPortfolio) setPortfolio(cachedPortfolio)
+
+      // Revalidate both in background
+      apiService.getProject(slugStr)
+        .then(res => {
+          cache.set(CACHE_KEYS.project(slugStr), res.data, CACHE_TTL.project)
+          setProject(res.data)
+        })
+        .catch(() => {})
+
+      apiService.getPortfolio()
+        .then(res => {
+          cache.set(CACHE_KEYS.portfolio, res.data, CACHE_TTL.portfolio)
+          setPortfolio(res.data)
+        })
+        .catch(() => {})
+      return
+    }
+
+    // Cache miss — fetch both, show spinner
     try {
       const [projectRes, portfolioRes] = await Promise.all([
-        apiService.getProject(slug),
-        apiService.getPortfolio() // For Footer social links
+        apiService.getProject(slugStr),
+        cachedPortfolio
+          ? Promise.resolve({ data: cachedPortfolio })
+          : apiService.getPortfolio(),
       ])
+      cache.set(CACHE_KEYS.project(slugStr), projectRes.data, CACHE_TTL.project)
+      if (!cachedPortfolio) {
+        cache.set(CACHE_KEYS.portfolio, portfolioRes.data, CACHE_TTL.portfolio)
+      }
       setProject(projectRes.data)
       setPortfolio(portfolioRes.data)
     } catch (error) {

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { apiService } from '../../services/apiService'
+import { cache, CACHE_KEYS, CACHE_TTL } from '../../services/cache'
 import { useTheme } from '../../context/ThemeContext'
 import { useSeasonContext } from '../../context/useSeasonContext'
 import { SeasonalBackground } from '../../features/seasonal/components/SeasonalEffects'
@@ -19,6 +20,7 @@ import '../../features/seasonal/styles/seasonal-decorations.css'
 export default function PortfolioViewer() {
   const [portfolio, setPortfolio] = useState(null)
   const [loading, setLoading] = useState(true)
+  const prefetchedRef = useRef(new Set())
   const { theme, refreshTheme } = useTheme()
   const { config: seasonConfig, setSeason } = useSeasonContext()
 
@@ -54,8 +56,23 @@ export default function PortfolioViewer() {
   }, [])
 
   const loadPortfolio = async () => {
+    const cached = cache.get(CACHE_KEYS.portfolio)
+    if (cached) {
+      // Serve from cache instantly, revalidate in background
+      setPortfolio(cached)
+      setLoading(false)
+      apiService.getPortfolio()
+        .then(res => {
+          cache.set(CACHE_KEYS.portfolio, res.data, CACHE_TTL.portfolio)
+          setPortfolio(res.data)
+        })
+        .catch(() => {})
+      return
+    }
+
     try {
       const response = await apiService.getPortfolio()
+      cache.set(CACHE_KEYS.portfolio, response.data, CACHE_TTL.portfolio)
       setPortfolio(response.data)
     } catch (error) {
       console.error('Failed to load portfolio:', error)
@@ -63,6 +80,42 @@ export default function PortfolioViewer() {
       setLoading(false)
     }
   }
+
+  // After portfolio loads, prefetch every project detail during browser idle time
+  useEffect(() => {
+    const projects = portfolio?.projects
+    if (!projects?.length) return
+
+    const toPrefetch = projects.filter(p => {
+      const slug = String(p.slug || p.id)
+      return slug && !cache.has(CACHE_KEYS.project(slug)) && !prefetchedRef.current.has(slug)
+    })
+    if (!toPrefetch.length) return
+
+    let handle
+    const useIdle = typeof requestIdleCallback === 'function'
+
+    const prefetchAll = () => {
+      for (const project of toPrefetch) {
+        const slug = String(project.slug || project.id)
+        prefetchedRef.current.add(slug)
+        apiService.getProject(slug)
+          .then(res => cache.set(CACHE_KEYS.project(slug), res.data, CACHE_TTL.project))
+          .catch(() => prefetchedRef.current.delete(slug))
+      }
+    }
+
+    if (useIdle) {
+      handle = requestIdleCallback(prefetchAll, { timeout: 3000 })
+    } else {
+      handle = setTimeout(prefetchAll, 1500)
+    }
+
+    return () => {
+      if (useIdle) cancelIdleCallback(handle)
+      else clearTimeout(handle)
+    }
+  }, [portfolio])
 
   if (loading) {
     return <div className="loading-screen">Loading...</div>
