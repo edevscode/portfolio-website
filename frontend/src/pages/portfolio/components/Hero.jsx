@@ -51,6 +51,22 @@ export default function Hero({ about }) {
         <p className="bio" style={{ color: colors.background }}>
           {about?.hero_tagline || about?.about_text || ''}
         </p>
+        <div className="hero-actions">
+          <a
+            href="#projects"
+            className="hero-btn primary"
+            style={{ backgroundColor: colors.secondary, color: colors.primary }}
+          >
+            View My Work
+          </a>
+          <a
+            href="#contact"
+            className="hero-btn secondary"
+            style={{ color: colors.background, borderColor: `${colors.background}55` }}
+          >
+            Get In Touch
+          </a>
+        </div>
       </div>
     </section>
   )

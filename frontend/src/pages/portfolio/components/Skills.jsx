@@ -24,7 +24,7 @@ export default function Skills({ skills }) {
 
   return (
     <section className="skills" id="skills" style={{
-      backgroundColor: colors.background
+      backgroundColor: colors.secondary
     }}>
       <div className="container">
         <h2 style={{ color: colors.primary }}>Skills & Expertise</h2>

@@ -67,6 +67,36 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
 }
 
+/* Section heading accent underline */
+.about h2,
+.skills h2,
+.experience h2,
+.contact h2,
+.projects h2,
+.projects-title,
+.testimonials h2 {
+  position: relative;
+  padding-bottom: 16px;
+}
+
+.about h2::after,
+.skills h2::after,
+.experience h2::after,
+.contact h2::after,
+.projects h2::after,
+.projects-title::after,
+.testimonials h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 3px;
+  background: var(--accent-color);
+  border-radius: 100px;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

@@ -4,7 +4,7 @@
 }
 
 .contact h2 {
-  font-size: 36px;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
   text-align: center;
   margin-bottom: 10px;
   color: var(--primary-color);
@@ -105,10 +105,6 @@
     padding: 60px 20px;
   }
 
-  .contact h2 {
-    font-size: 28px;
-  }
-
   .contact-layout {
     grid-template-columns: 1fr;
     gap: 18px;
@@ -118,10 +114,6 @@
 @media (max-width: 480px) {
   .contact {
     padding: 48px 16px;
-  }
-
-  .contact h2 {
-    font-size: 24px;
   }
 
   .form-group input,

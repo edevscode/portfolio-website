@@ -4,7 +4,7 @@
 }
 
 .experience h2 {
-  font-size: 36px;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
   text-align: center;
   margin-bottom: 50px;
   color: var(--primary-color);
@@ -111,10 +111,6 @@
     padding: 60px 20px;
   }
 
-  .experience h2 {
-    font-size: 28px;
-  }
-
   .timeline::before {
     left: 30px;
   }
@@ -152,7 +148,6 @@
   }
 
   .experience h2 {
-    font-size: 24px;
     margin-bottom: 36px;
   }
 

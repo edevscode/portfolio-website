@@ -54,7 +54,7 @@ export default function Contact({ about, socialLinks }) {
 
   return (
     <section className="contact" id="contact" style={{
-      backgroundColor: colors.background
+      backgroundColor: colors.secondary
     }}>
       <div className="container">
         <h2 style={{ color: colors.primary }}>Get In Touch</h2>

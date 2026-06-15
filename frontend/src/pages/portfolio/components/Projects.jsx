@@ -183,12 +183,10 @@ export default function Projects({ projects }) {
           return (
             <>
               {liveProjects.length > 0 && (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                  gap: '30px',
-                  marginBottom: localProjects.length > 0 ? '80px' : '0'
-                }}>
+                <div
+                  className="projects-grid"
+                  style={{ marginBottom: localProjects.length > 0 ? '80px' : '0' }}
+                >
                   {liveProjects.map((project) => (
                     <div 
                       key={project.id} 
@@ -258,11 +256,7 @@ export default function Projects({ projects }) {
               )}
 
               {localProjects.length > 0 && (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                  gap: '30px'
-                }}>
+                <div className="projects-grid">
                   {localProjects.map((project) => (
                     <div 
                       key={project.id} 

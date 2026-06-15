@@ -42,7 +42,7 @@ export default function Navigation() {
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        <ul className={`nav-menu ${menuOpen ? 'active' : ''}`}>
+        <ul className={`nav-menu ${menuOpen ? 'active' : ''}`} style={{ backgroundColor: colors.primary }}>
           <li><a href="#hero" className="nav-link" onClick={handleNavClick} style={{
             color: colors.background
           }}>Home</a></li>
