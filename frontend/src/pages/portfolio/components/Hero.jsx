@@ -2,6 +2,7 @@ import React from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { API_BASE_URL } from '../../../services/apiService'
+import { getReadableTextColor } from '../../../utils/color'
 import './Hero.css'
 
 export default function Hero({ about }) {
@@ -31,10 +32,12 @@ export default function Hero({ about }) {
     text: seasonConfig?.colors?.text || 'black'
   }
 
+  const heroText = getReadableTextColor([colors.primary, colors.accent])
+
   return (
     <section className="hero" id="hero" style={{
       background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%)`,
-      color: colors.background
+      color: heroText
     }}>
       <div className="hero-content">
         {profileImageUrl ? (
@@ -42,13 +45,13 @@ export default function Hero({ about }) {
         ) : (
           <div className="hero-avatar placeholder" />
         )}
-        <h1 style={{ color: colors.background }}>
+        <h1 style={{ color: heroText }}>
           {about?.hero_name || about?.hero_heading || 'Your Name'}
         </h1>
         <p style={{ color: colors.secondary }}>
           {about?.hero_role || about?.hero_subheading || 'Your Role'}
         </p>
-        <p className="bio" style={{ color: colors.background }}>
+        <p className="bio" style={{ color: heroText }}>
           {about?.hero_tagline || about?.about_text || ''}
         </p>
         <div className="hero-actions">
@@ -62,7 +65,7 @@ export default function Hero({ about }) {
           <a
             href="#contact"
             className="hero-btn secondary"
-            style={{ color: colors.background, borderColor: `${colors.background}55` }}
+            style={{ color: heroText, borderColor: `${heroText}55` }}
           >
             Get In Touch
           </a>

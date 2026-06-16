@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { apiService, API_BASE_URL } from '../../services/apiService'
 import { cache, CACHE_KEYS, CACHE_TTL } from '../../services/cache'
+import { getReadableTextColor } from '../../utils/color'
 import { useTheme } from '../../context/ThemeContext'
 import { useSeasonContext } from '../../context/useSeasonContext'
 import { SeasonalBackground } from '../../features/seasonal/components/SeasonalEffects'
@@ -293,12 +294,12 @@ export default function ProjectDetailsViewer() {
           <h1 style={{ color: colors.primary }}>{project.title}</h1>
           <div className="project-details-links">
             {project.url && (
-              <a href={project.url} target="_blank" rel="noopener noreferrer" className="pill-btn" style={{ backgroundColor: colors.accent, color: colors.background }}>
+              <a href={project.url} target="_blank" rel="noopener noreferrer" className="pill-btn" style={{ backgroundColor: colors.accent, color: getReadableTextColor(colors.accent) }}>
                 Live Site
               </a>
             )}
             {project.github_url && (
-              <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="pill-btn" style={{ backgroundColor: colors.primary, color: colors.background }}>
+              <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="pill-btn" style={{ backgroundColor: colors.primary, color: getReadableTextColor(colors.primary) }}>
                 GitHub
               </a>
             )}

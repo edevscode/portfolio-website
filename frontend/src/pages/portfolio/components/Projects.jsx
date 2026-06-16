@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { API_BASE_URL } from '../../../services/apiService'
+import { getReadableTextColor } from '../../../utils/color'
 import './Projects.css'
 
 function normalizeMediaUrl(url) {
@@ -225,7 +226,7 @@ export default function Projects({ projects }) {
                               rel="noopener noreferrer" 
                               className="pill-btn"
                               onClick={(e) => e.stopPropagation()}
-                              style={{ backgroundColor: colors.accent, color: colors.background, padding: '6px 16px', fontSize: '13px' }}
+                              style={{ backgroundColor: colors.accent, color: getReadableTextColor(colors.accent), padding: '6px 16px', fontSize: '13px' }}
                             >
                               View
                             </a>

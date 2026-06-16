@@ -3,6 +3,7 @@ import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
+import { getReadableTextColor } from '../../../utils/color'
 import './Navigation.css'
 
 export default function Navigation() {
@@ -24,6 +25,8 @@ export default function Navigation() {
     setMenuOpen(false)
   }
 
+  const navText = getReadableTextColor(colors.primary)
+
   return (
     <nav className="portfolio-nav" style={{
       backgroundColor: colors.primary,
@@ -31,35 +34,35 @@ export default function Navigation() {
     }}>
       <div className="nav-container">
         <a href="#hero" className="nav-logo" onClick={handleNavClick} style={{
-          color: colors.background
+          color: navText
         }}>
           Portfolio
         </a>
 
         <button className="nav-toggle" onClick={() => setMenuOpen(!menuOpen)} style={{
-          color: colors.background
+          color: navText
         }}>
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
         <ul className={`nav-menu ${menuOpen ? 'active' : ''}`} style={{ backgroundColor: colors.primary }}>
           <li><a href="#hero" className="nav-link" onClick={handleNavClick} style={{
-            color: colors.background
+            color: navText
           }}>Home</a></li>
           <li><a href="#about" className="nav-link" onClick={handleNavClick} style={{
-            color: colors.background
+            color: navText
           }}>About</a></li>
           <li><a href="#skills" className="nav-link" onClick={handleNavClick} style={{
-            color: colors.background
+            color: navText
           }}>Skills</a></li>
           <li><a href="#projects" className="nav-link" onClick={handleNavClick} style={{
-            color: colors.background
+            color: navText
           }}>Projects</a></li>
           <li><a href="#experience" className="nav-link" onClick={handleNavClick} style={{
-            color: colors.background
+            color: navText
           }}>Experience</a></li>
           <li><a href="#contact" className="nav-link" onClick={handleNavClick} style={{
-            color: colors.background
+            color: navText
           }}>Contact</a></li>
         </ul>
       </div>

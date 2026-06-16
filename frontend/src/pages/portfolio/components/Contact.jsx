@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { apiService } from '../../../services/apiService'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
+import { getReadableTextColor } from '../../../utils/color'
 import './Contact.css'
 
 export default function Contact({ about, socialLinks }) {
@@ -89,7 +90,7 @@ export default function Contact({ about, socialLinks }) {
           <div className="contact-form-area">
             {submitted && <div className="success-message" style={{
               backgroundColor: colors.accent,
-              color: colors.background
+              color: getReadableTextColor(colors.accent)
             }}>✓ Message sent successfully!</div>}
 
             <form className="contact-form" onSubmit={handleSubmit}>
@@ -160,7 +161,7 @@ export default function Contact({ about, socialLinks }) {
           <button type="submit" className="submit-btn" disabled={loading} style={{
             backgroundColor: colors.primary,
             borderColor: colors.accent,
-            color: colors.background
+            color: getReadableTextColor(colors.primary)
           }}>
             {loading ? 'Sending...' : 'Send Message'}
           </button>
