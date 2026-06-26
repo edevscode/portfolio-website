@@ -183,6 +183,10 @@ CORS_ALLOWED_ORIGINS = config(
     default='http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000',
     cast=Csv(),
 )
+# Always allow the production Vercel frontend regardless of env var
+_vercel_origin = 'https://portfolio-geronimo.vercel.app'
+if _vercel_origin not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS = list(CORS_ALLOWED_ORIGINS) + [_vercel_origin]
 
 # CSRF Trusted Origins (Must include https:// for production)
 CSRF_TRUSTED_ORIGINS = config(
@@ -192,7 +196,12 @@ CSRF_TRUSTED_ORIGINS = config(
 )
 # Automatically add https versions if not present
 if not DEBUG:
-    CSRF_TRUSTED_ORIGINS += [origin.replace('http://', 'https://') for origin in CSRF_TRUSTED_ORIGINS if origin.startswith('http://')]
+    CSRF_TRUSTED_ORIGINS = list(CSRF_TRUSTED_ORIGINS) + [
+        origin.replace('http://', 'https://') for origin in CSRF_TRUSTED_ORIGINS if origin.startswith('http://')
+    ]
+# Always trust the production Vercel frontend
+if _vercel_origin not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = list(CSRF_TRUSTED_ORIGINS) + [_vercel_origin]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^https://.*\.vercel\.app$',
     r'^https://.*\.vercel\.com$',
