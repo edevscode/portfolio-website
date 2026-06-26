@@ -125,9 +125,23 @@ class ProjectImage(models.Model):
         return f"{self.project.title} image #{self.order}"
 
 
+def _video_storage():
+    """Use VideoMediaCloudinaryStorage in production so videos are uploaded with
+    resource_type='video' instead of the default 'image' that MediaCloudinaryStorage uses."""
+    from django.conf import settings
+    if getattr(settings, 'CLOUDINARY_URL', ''):
+        try:
+            from cloudinary_storage.storage import VideoMediaCloudinaryStorage
+            return VideoMediaCloudinaryStorage()
+        except ImportError:
+            pass
+    from django.core.files.storage import FileSystemStorage
+    return FileSystemStorage()
+
+
 class ProjectVideo(models.Model):
     project = models.ForeignKey(Project, related_name='video_items', on_delete=models.CASCADE)
-    video = models.FileField(upload_to='project_videos/')
+    video = models.FileField(upload_to='project_videos/', storage=_video_storage)
     caption = models.CharField(max_length=180, blank=True, default='')
     order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
