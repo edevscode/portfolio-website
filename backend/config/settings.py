@@ -171,6 +171,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Allow up to 200 MB total per request (needed for video uploads)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 209715200   # 200 MB non-file form data
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760    # 10 MB; files larger than this stream to disk
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
