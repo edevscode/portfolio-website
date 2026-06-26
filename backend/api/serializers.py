@@ -38,10 +38,13 @@ class ProjectSerializer(serializers.ModelSerializer):
         return ProjectImageSerializer(items.all(), many=True, context=self.context).data
 
     def get_video_items(self, obj):
-        items = getattr(obj, 'video_items', None)
-        if items is None:
+        try:
+            items = getattr(obj, 'video_items', None)
+            if items is None:
+                return []
+            return ProjectVideoSerializer(items.all(), many=True, context=self.context).data
+        except Exception:
             return []
-        return ProjectVideoSerializer(items.all(), many=True, context=self.context).data
 
     class Meta:
         model = Project
