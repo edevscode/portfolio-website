@@ -167,10 +167,6 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
 # Allow up to 200 MB total per request (needed for video uploads)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 209715200   # 200 MB non-file form data
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760    # 10 MB; files larger than this stream to disk
@@ -235,6 +231,32 @@ REST_FRAMEWORK = {
 # Media Files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
 
 # Cloudinary & Static Files Storage
 CLOUDINARY_URL = config('CLOUDINARY_URL', default='')

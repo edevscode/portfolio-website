@@ -1,3 +1,5 @@
+import logging
+import traceback
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
@@ -6,6 +8,8 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from datetime import datetime
 from django.db.models import Q
+
+logger = logging.getLogger(__name__)
 from .models import Theme, Project, ProjectImage, ProjectVideo, Skill, Experience, About, SocialLink, Contact
 from .serializers import (
     ThemeSerializer, ProjectSerializer, SkillSerializer,
@@ -185,33 +189,53 @@ class ProjectViewSet(viewsets.ModelViewSet):
             )
 
     def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
+        try:
+            response = super().create(request, *args, **kwargs)
+        except Exception as exc:
+            tb = traceback.format_exc()
+            logger.error('ProjectViewSet.create super() failed: %s\n%s', exc, tb)
+            return Response({'detail': str(exc), 'traceback': tb}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         try:
             project = Project.objects.get(pk=response.data.get('id'))
         except Exception:
             return response
 
-        self._save_project_images(project, request, replace=False)
-        self._save_project_videos(project, request, replace=False)
-        serializer = self.get_serializer(project)
-        return Response(serializer.data, status=response.status_code)
+        try:
+            self._save_project_images(project, request, replace=False)
+            self._save_project_videos(project, request, replace=False)
+            serializer = self.get_serializer(project)
+            return Response(serializer.data, status=response.status_code)
+        except Exception as exc:
+            tb = traceback.format_exc()
+            logger.error('ProjectViewSet.create post-save failed: %s\n%s', exc, tb)
+            return Response({'detail': str(exc), 'traceback': tb}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update(self, request, *args, **kwargs):
         replace_img = str(request.data.get('replace_images', '')).lower() in ('1', 'true', 'yes')
         replace_vid = str(request.data.get('replace_videos', '')).lower() in ('1', 'true', 'yes')
 
-        response = super().update(request, *args, **kwargs)
+        try:
+            response = super().update(request, *args, **kwargs)
+        except Exception as exc:
+            tb = traceback.format_exc()
+            logger.error('ProjectViewSet.update super() failed: %s\n%s', exc, tb)
+            return Response({'detail': str(exc), 'traceback': tb}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         try:
             project = self.get_object()
         except Exception:
             return response
 
-        self._save_project_images(project, request, replace=replace_img)
-        self._save_project_videos(project, request, replace=replace_vid)
-        serializer = self.get_serializer(project)
-        return Response(serializer.data, status=response.status_code)
+        try:
+            self._save_project_images(project, request, replace=replace_img)
+            self._save_project_videos(project, request, replace=replace_vid)
+            serializer = self.get_serializer(project)
+            return Response(serializer.data, status=response.status_code)
+        except Exception as exc:
+            tb = traceback.format_exc()
+            logger.error('ProjectViewSet.update post-save failed: %s\n%s', exc, tb)
+            return Response({'detail': str(exc), 'traceback': tb}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def partial_update(self, request, *args, **kwargs):
         kwargs['partial'] = True
