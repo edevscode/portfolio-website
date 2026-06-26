@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Theme, Project, ProjectImage, Skill, Experience, About, SocialLink, Contact
+from .models import Theme, Project, ProjectImage, ProjectVideo, Skill, Experience, About, SocialLink, Contact
 
 
 class ThemeSerializer(serializers.ModelSerializer):
@@ -21,8 +21,15 @@ class ProjectImageSerializer(serializers.ModelSerializer):
         fields = ['id', 'image', 'caption', 'order', 'created_at']
 
 
+class ProjectVideoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectVideo
+        fields = ['id', 'video', 'caption', 'order', 'created_at']
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     image_items = serializers.SerializerMethodField()
+    video_items = serializers.SerializerMethodField()
 
     def get_image_items(self, obj):
         items = getattr(obj, 'image_items', None)
@@ -30,11 +37,17 @@ class ProjectSerializer(serializers.ModelSerializer):
             return []
         return ProjectImageSerializer(items.all(), many=True, context=self.context).data
 
+    def get_video_items(self, obj):
+        items = getattr(obj, 'video_items', None)
+        if items is None:
+            return []
+        return ProjectVideoSerializer(items.all(), many=True, context=self.context).data
+
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'slug', 'description', 'project_type',
-            'thumbnail', 'images', 'image_items', 'url', 'github_url',
+            'thumbnail', 'images', 'image_items', 'video_items', 'url', 'github_url',
             'order', 'is_featured', 'is_published', 'created_at', 'updated_at'
         ]
         extra_kwargs = {

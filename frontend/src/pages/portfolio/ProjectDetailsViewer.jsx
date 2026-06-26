@@ -234,34 +234,36 @@ export default function ProjectDetailsViewer() {
 
   const items = useMemo(() => {
     if (!project) return []
-    // Pull all the gallery images.
     const arr = []
-    
+
     if (project.thumbnail) {
-      arr.push({ src: normalizeMediaUrl(project.thumbnail), caption: 'Thumbnail' })
+      arr.push({ src: normalizeMediaUrl(project.thumbnail), caption: 'Thumbnail', type: 'image' })
     }
-    
+
     if (Array.isArray(project.image_items) && project.image_items.length > 0) {
-      const imageItems = project.image_items
+      project.image_items
         .slice()
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((it) => ({ src: normalizeMediaUrl(it.image), caption: it.caption || '' }))
-      arr.push(...imageItems)
+        .forEach((it) => arr.push({ src: normalizeMediaUrl(it.image), caption: it.caption || '', type: 'image' }))
     } else if (Array.isArray(project.images) && project.images.length > 0) {
-      const imageItems = project.images.map((src) => ({ src: normalizeMediaUrl(src), caption: '' }))
-      arr.push(...imageItems)
+      project.images.forEach((src) => arr.push({ src: normalizeMediaUrl(src), caption: '', type: 'image' }))
     }
-    
-    // Deduplicate thumbnail if it exists inside images array
-    const uniqueMap = {}
-    const filtered = []
-    for (const item of arr) {
-      if (!uniqueMap[item.src]) {
-        uniqueMap[item.src] = true
-        filtered.push(item)
-      }
+
+    if (Array.isArray(project.video_items) && project.video_items.length > 0) {
+      project.video_items
+        .slice()
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .forEach((it) => arr.push({ src: normalizeMediaUrl(it.video), caption: it.caption || '', type: 'video' }))
     }
-    return filtered
+
+    // Deduplicate images by src; videos are always unique
+    const seen = new Set()
+    return arr.filter((it) => {
+      if (it.type === 'video') return true
+      if (seen.has(it.src)) return false
+      seen.add(it.src)
+      return true
+    })
   }, [project])
 
   if (loading) {
@@ -317,14 +319,29 @@ export default function ProjectDetailsViewer() {
             <h2 style={{ color: colors.primary }}>Project Gallery</h2>
             <div className="gallery-grid">
               {items.map((it, idx) => (
-                <div key={idx} className="gallery-item-wrap" onClick={() => openImage({ src: it.src, caption: it.caption || '', alt: project.title })}>
-                  <div className="gallery-item" style={{ borderColor: colors.accent }}>
-                    <img src={it.src} alt={`${project.title} gallery item`} />
-                    <div className="gallery-item-overlay">
-                      <span className="expand-icon">⤢</span>
+                <div key={idx} className="gallery-item-wrap">
+                  {it.type === 'video' ? (
+                    <div className="gallery-item gallery-item--video" style={{ borderColor: colors.accent }}>
+                      <video
+                        src={it.src}
+                        controls
+                        preload="metadata"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000', display: 'block' }}
+                      />
                     </div>
-                  </div>
-                  {it.caption && (
+                  ) : (
+                    <div
+                      className="gallery-item"
+                      style={{ borderColor: colors.accent, cursor: 'zoom-in' }}
+                      onClick={() => openImage({ src: it.src, caption: it.caption || '', alt: project.title })}
+                    >
+                      <img src={it.src} alt={`${project.title} gallery item`} />
+                      <div className="gallery-item-overlay">
+                        <span className="expand-icon">⤢</span>
+                      </div>
+                    </div>
+                  )}
+                  {it.caption && it.caption !== 'Thumbnail' && (
                     <div className="gallery-item-caption" style={{ color: colors.text }}>
                       {it.caption}
                     </div>

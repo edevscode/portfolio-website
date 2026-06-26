@@ -26,6 +26,11 @@ export default function ProjectsManager() {
   const [pendingCaption, setPendingCaption] = useState('')
   const [replaceImages, setReplaceImages] = useState(false)
 
+  const [videoItems, setVideoItems] = useState([])
+  const [pendingVideoItems, setPendingVideoItems] = useState([])
+  const [pendingVideoCaption, setPendingVideoCaption] = useState('')
+  const [replaceVideos, setReplaceVideos] = useState(false)
+
   useEffect(() => {
     loadProjects()
   }, [])
@@ -43,32 +48,18 @@ export default function ProjectsManager() {
     }
   }
 
+  const revokeAll = (items) => items.forEach((it) => { if (it.previewUrl) try { URL.revokeObjectURL(it.previewUrl) } catch { } })
+
   const resetGalleryItems = () => {
-    setGalleryItems((prev) => {
-      prev.forEach((it) => {
-        if (!it.previewUrl) return
-        try {
-          URL.revokeObjectURL(it.previewUrl)
-        } catch {
-          // ignore
-        }
-      })
-      return []
-    })
-
-    setPendingGalleryItems((prev) => {
-      prev.forEach((it) => {
-        if (!it.previewUrl) return
-        try {
-          URL.revokeObjectURL(it.previewUrl)
-        } catch {
-          // ignore
-        }
-      })
-      return []
-    })
-
+    setGalleryItems((prev) => { revokeAll(prev); return [] })
+    setPendingGalleryItems((prev) => { revokeAll(prev); return [] })
     setPendingCaption('')
+  }
+
+  const resetVideoItems = () => {
+    setVideoItems((prev) => { revokeAll(prev); return [] })
+    setPendingVideoItems((prev) => { revokeAll(prev); return [] })
+    setPendingVideoCaption('')
   }
 
   const handleAdd = () => {
@@ -84,18 +75,20 @@ export default function ProjectsManager() {
     })
     setThumbnailFile(null)
     resetGalleryItems()
+    resetVideoItems()
     setReplaceImages(false)
+    setReplaceVideos(false)
     setEditingId(null)
     setShowForm(true)
   }
 
   const handleEdit = (project) => {
-    setFormData({
-      ...project,
-    })
+    setFormData({ ...project })
     setThumbnailFile(null)
     resetGalleryItems()
+    resetVideoItems()
     setReplaceImages(false)
+    setReplaceVideos(false)
     setEditingId(project.id)
     setShowForm(true)
   }
@@ -186,10 +179,48 @@ export default function ProjectsManager() {
     setPendingCaption('')
   }
 
+  const handleVideoFilesChange = (e) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    setPendingVideoItems((prev) => { revokeAll(prev); return [] })
+    setPendingVideoItems(files.map((file) => ({
+      key: `${file.name}|${file.size}|${file.lastModified}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+    })))
+    e.target.value = ''
+  }
+
+  const commitPendingVideos = () => {
+    if (!pendingVideoItems.length) return
+    setVideoItems((prev) => {
+      const existingKeys = new Set(prev.map((it) => it.key))
+      const next = [...prev]
+      pendingVideoItems.forEach((it) => {
+        if (existingKeys.has(it.key)) { try { URL.revokeObjectURL(it.previewUrl) } catch { } return }
+        existingKeys.add(it.key)
+        next.push({ ...it, caption: pendingVideoCaption || '' })
+      })
+      return next
+    })
+    setPendingVideoItems([])
+    setPendingVideoCaption('')
+  }
+
+  const removeVideoItem = (key) => {
+    setVideoItems((prev) => {
+      const target = prev.find((it) => it.key === key)
+      if (target?.previewUrl) try { URL.revokeObjectURL(target.previewUrl) } catch { }
+      return prev.filter((it) => it.key !== key)
+    })
+  }
+
   const handleClose = () => {
     resetGalleryItems()
+    resetVideoItems()
     setThumbnailFile(null)
     setReplaceImages(false)
+    setReplaceVideos(false)
     setEditingId(null)
     setShowForm(false)
   }
@@ -234,6 +265,18 @@ export default function ProjectsManager() {
 
       if (editingId && replaceImages) {
         data.append('replace_images', 'true')
+      }
+
+      if (videoItems.length > 0) {
+        videoItems.forEach((it) => {
+          if (!it.file) return
+          data.append('videos', it.file)
+          data.append('video_captions', it.caption || '')
+        })
+      }
+
+      if (editingId && replaceVideos) {
+        data.append('replace_videos', 'true')
       }
 
       if (editingId) {
@@ -441,6 +484,87 @@ export default function ProjectsManager() {
                   onChange={(e) => setReplaceImages(e.target.checked)}
                 />
                 Replace existing images
+              </label>
+            </div>
+          )}
+
+          {formData.project_type === 'local' && (
+            <div className="form-field">
+              <label>Project Videos</label>
+              <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
+                <input type="file" accept="video/*" multiple onChange={handleVideoFilesChange} />
+              </div>
+
+              {pendingVideoItems.length > 0 && (
+                <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <div>{pendingVideoItems.length} pending video(s)</div>
+                    <button type="button" className="btn-cancel" onClick={() => { setPendingVideoItems((p) => { revokeAll(p); return [] }); setPendingVideoCaption('') }}>
+                      Clear pending
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={pendingVideoCaption}
+                    onChange={(e) => setPendingVideoCaption(e.target.value)}
+                    placeholder="Caption applied to all selected videos"
+                  />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                    {pendingVideoItems.map((it) => (
+                      <div key={it.key} style={{ height: 120, borderRadius: 10, overflow: 'hidden', background: 'rgba(0,0,0,0.06)' }}>
+                        <video src={it.previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} muted preload="metadata" />
+                      </div>
+                    ))}
+                  </div>
+
+                  <button type="button" className="btn-submit" onClick={commitPendingVideos}>
+                    Add videos
+                  </button>
+                </div>
+              )}
+
+              {videoItems.length > 0 && (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <div>{videoItems.length} video(s) added</div>
+                    <button type="button" className="btn-cancel" onClick={resetVideoItems}>Clear</button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                    {videoItems.map((it) => (
+                      <div key={it.key} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: 'rgba(0,0,0,0.06)' }}>
+                        <div style={{ height: 140 }}>
+                          <video src={it.previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} muted preload="metadata" />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-cancel"
+                          style={{ position: 'absolute', right: 8, top: 8, padding: '4px 8px' }}
+                          onClick={() => removeVideoItem(it.key)}
+                          aria-label="Remove video"
+                        >
+                          X
+                        </button>
+                        <div style={{ padding: '8px 10px', fontSize: 12, opacity: 0.8 }}>{it.caption || ''}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {editingId && formData.project_type === 'local' && (
+            <div className="checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={replaceVideos}
+                  onChange={(e) => setReplaceVideos(e.target.checked)}
+                />
+                Replace existing videos
               </label>
             </div>
           )}

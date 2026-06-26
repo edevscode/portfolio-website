@@ -6,7 +6,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from datetime import datetime
 from django.db.models import Q
-from .models import Theme, Project, ProjectImage, Skill, Experience, About, SocialLink, Contact
+from .models import Theme, Project, ProjectImage, ProjectVideo, Skill, Experience, About, SocialLink, Contact
 from .serializers import (
     ThemeSerializer, ProjectSerializer, SkillSerializer,
     ExperienceSerializer, AboutSerializer, SocialLinkSerializer,
@@ -151,6 +151,39 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project.images = [img.image.url for img in project.image_items.all()]
         project.save(update_fields=['images'])
 
+    def _save_project_videos(self, project, request, replace=False):
+        if replace:
+            ProjectVideo.objects.filter(project=project).delete()
+
+        files = []
+        captions = []
+
+        if hasattr(request, 'FILES'):
+            files = request.FILES.getlist('videos') or []
+
+        if hasattr(request, 'data') and hasattr(request.data, 'getlist'):
+            captions = request.data.getlist('video_captions') or []
+        else:
+            captions_value = request.data.get('video_captions') if hasattr(request, 'data') else None
+            if isinstance(captions_value, list):
+                captions = captions_value
+            elif captions_value:
+                captions = [captions_value]
+
+        if not files:
+            return
+
+        start_order = ProjectVideo.objects.filter(project=project).count()
+
+        for idx, f in enumerate(files):
+            caption = captions[idx] if idx < len(captions) else ''
+            ProjectVideo.objects.create(
+                project=project,
+                video=f,
+                caption=caption,
+                order=start_order + idx,
+            )
+
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
 
@@ -160,11 +193,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return response
 
         self._save_project_images(project, request, replace=False)
+        self._save_project_videos(project, request, replace=False)
         serializer = self.get_serializer(project)
         return Response(serializer.data, status=response.status_code)
 
     def update(self, request, *args, **kwargs):
-        replace = str(request.data.get('replace_images', '')).lower() in ('1', 'true', 'yes')
+        replace_img = str(request.data.get('replace_images', '')).lower() in ('1', 'true', 'yes')
+        replace_vid = str(request.data.get('replace_videos', '')).lower() in ('1', 'true', 'yes')
 
         response = super().update(request, *args, **kwargs)
 
@@ -173,7 +208,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         except Exception:
             return response
 
-        self._save_project_images(project, request, replace=replace)
+        self._save_project_images(project, request, replace=replace_img)
+        self._save_project_videos(project, request, replace=replace_vid)
         serializer = self.get_serializer(project)
         return Response(serializer.data, status=response.status_code)
 

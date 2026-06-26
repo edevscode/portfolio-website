@@ -202,7 +202,19 @@
 }
 
 .gallery-item-wrap {
-  cursor: pointer;
+  cursor: default;
+}
+
+/* Video items fill the same square slot but don't need a zoom overlay */
+.gallery-item--video {
+  cursor: auto;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.gallery-item--video:hover {
+  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .gallery-item {

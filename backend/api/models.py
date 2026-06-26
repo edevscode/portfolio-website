@@ -125,6 +125,21 @@ class ProjectImage(models.Model):
         return f"{self.project.title} image #{self.order}"
 
 
+class ProjectVideo(models.Model):
+    project = models.ForeignKey(Project, related_name='video_items', on_delete=models.CASCADE)
+    video = models.FileField(upload_to='project_videos/')
+    caption = models.CharField(max_length=180, blank=True, default='')
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'project_videos'
+        ordering = ['order', 'created_at']
+
+    def __str__(self):
+        return f"{self.project.title} video #{self.order}"
+
+
 class Skill(models.Model):
     name = models.CharField(max_length=100)
     proficiency = models.PositiveIntegerField(default=80)  # 0-100
