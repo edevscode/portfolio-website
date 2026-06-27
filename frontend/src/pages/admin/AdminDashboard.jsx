@@ -45,10 +45,10 @@ export default function AdminDashboard({ setIsAdmin }) {
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="brand">
-            <div className="brand-mark" aria-hidden="true" />
+            <div className="brand-mark" aria-hidden="true">P</div>
             <div className="brand-text">
-              <div className="brand-title">Admin</div>
-              <div className="brand-subtitle">Portfolio</div>
+              <div className="brand-title">Portfolio</div>
+              <div className="brand-subtitle">Admin Console</div>
             </div>
           </div>
           <button 

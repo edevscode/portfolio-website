@@ -1,7 +1,8 @@
 import React from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import './Form.css'
 
- export function FormField({ label, name, type = 'text', value, onChange, placeholder, required, error, rows, accept, multiple, options }) {
+export function FormField({ label, name, type = 'text', value, onChange, placeholder, required, error, rows, accept, multiple, options }) {
   return (
     <div className="form-field">
       {label && (
@@ -58,7 +59,7 @@ export function ModalForm({ title, onSubmit, onClose, children, submitText = 'Sa
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{title}</h2>
-          <button className="close-modal" onClick={onClose}>×</button>
+          <button className="close-modal" onClick={onClose} aria-label="Close">×</button>
         </div>
         <form onSubmit={onSubmit} className="modal-form">
           {children}
@@ -74,11 +75,11 @@ export function ModalForm({ title, onSubmit, onClose, children, submitText = 'Sa
 
 export function Table({ columns, data, onEdit, onDelete, loading }) {
   if (loading) {
-    return <div className="loading">Loading...</div>
+    return <div className="loading">Loading…</div>
   }
 
   if (data.length === 0) {
-    return <div className="no-data">No data found</div>
+    return <div className="no-data">No items yet</div>
   }
 
   return (
@@ -101,9 +102,17 @@ export function Table({ columns, data, onEdit, onDelete, loading }) {
                 </td>
               ))}
               {(onEdit || onDelete) && (
-                <td className="actions">
-                  {onEdit && <button className="btn-edit" onClick={() => onEdit(row)}>Edit</button>}
-                  {onDelete && <button className="btn-delete" onClick={() => onDelete(row.id)}>Delete</button>}
+                <td className="table-actions">
+                  {onEdit && (
+                    <button className="btn-icon btn-icon--edit" onClick={() => onEdit(row)} title="Edit">
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button className="btn-icon btn-icon--delete" onClick={() => onDelete(row.id)} title="Delete">
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </td>
               )}
             </tr>

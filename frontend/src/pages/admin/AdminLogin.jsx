@@ -45,8 +45,11 @@ export default function AdminLogin({ setIsAdmin }) {
     <div className="login-container">
       <div className="login-box">
         <div className="login-header">
-          <Lock size={40} style={{ color: theme?.primary_color || '#000' }} />
+          <div className="login-icon-wrap">
+            <Lock size={22} />
+          </div>
           <h1>Admin Portal</h1>
+          <p className="login-subtext">Portfolio Management System</p>
         </div>
         
         <form onSubmit={handleSubmit}>

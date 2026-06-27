@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import { FormField, ModalForm, Table } from './Form'
 import './Manager.css'
@@ -63,16 +63,7 @@ export default function ProjectsManager() {
   }
 
   const handleAdd = () => {
-    setFormData({
-      title: '',
-      description: '',
-      url: '',
-      github_url: '',
-      project_type: 'live',
-      is_featured: false,
-      is_published: true,
-      order: 0,
-    })
+    setFormData({ title: '', description: '', url: '', github_url: '', project_type: 'live', is_featured: false, is_published: true, order: 0 })
     setThumbnailFile(null)
     resetGalleryItems()
     resetVideoItems()
@@ -94,54 +85,33 @@ export default function ProjectsManager() {
   }
 
   const handleThumbnailChange = (e) => {
-    const file = e.target.files && e.target.files[0]
-    setThumbnailFile(file || null)
+    setThumbnailFile(e.target.files?.[0] || null)
   }
 
   const handleGalleryFilesChange = (e) => {
-    const files = Array.from((e.target.files || []))
-    if (files.length === 0) return
-
-    setPendingGalleryItems((prev) => {
-      prev.forEach((it) => {
-        if (!it.previewUrl) return
-        try {
-          URL.revokeObjectURL(it.previewUrl)
-        } catch {
-          // ignore
-        }
-      })
-
-      return files.map((file) => {
-        const key = `${file.name}|${file.size}|${file.lastModified}`
-        return { key, file, previewUrl: URL.createObjectURL(file) }
-      })
-    })
-
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    setPendingGalleryItems((prev) => { revokeAll(prev); return [] })
+    setPendingGalleryItems(files.map((file) => ({
+      key: `${file.name}|${file.size}|${file.lastModified}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+    })))
     e.target.value = ''
   }
 
   const commitPendingImages = () => {
-    if (pendingGalleryItems.length === 0) return
-
+    if (!pendingGalleryItems.length) return
     setGalleryItems((prev) => {
       const existingKeys = new Set(prev.map((it) => it.key))
       const next = [...prev]
       pendingGalleryItems.forEach((it) => {
-        if (existingKeys.has(it.key)) {
-          try {
-            URL.revokeObjectURL(it.previewUrl)
-          } catch {
-            // ignore
-          }
-          return
-        }
+        if (existingKeys.has(it.key)) { try { URL.revokeObjectURL(it.previewUrl) } catch { } return }
         existingKeys.add(it.key)
         next.push({ ...it, caption: pendingCaption || '' })
       })
       return next
     })
-
     setPendingGalleryItems([])
     setPendingCaption('')
   }
@@ -149,34 +119,9 @@ export default function ProjectsManager() {
   const removeGalleryItem = (key) => {
     setGalleryItems((prev) => {
       const target = prev.find((it) => it.key === key)
-      if (target?.previewUrl) {
-        try {
-          URL.revokeObjectURL(target.previewUrl)
-        } catch {
-          // ignore
-        }
-      }
+      if (target?.previewUrl) try { URL.revokeObjectURL(target.previewUrl) } catch { }
       return prev.filter((it) => it.key !== key)
     })
-  }
-
-  const clearGalleryItems = () => {
-    resetGalleryItems()
-  }
-
-  const clearPendingGalleryItems = () => {
-    setPendingGalleryItems((prev) => {
-      prev.forEach((it) => {
-        if (!it.previewUrl) return
-        try {
-          URL.revokeObjectURL(it.previewUrl)
-        } catch {
-          // ignore
-        }
-      })
-      return []
-    })
-    setPendingCaption('')
   }
 
   const handleVideoFilesChange = (e) => {
@@ -226,11 +171,11 @@ export default function ProjectsManager() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure?')) return
+    if (!window.confirm('Delete this project? This cannot be undone.')) return
     try {
-      const project = projects.find(p => p.id === id)
+      const project = projects.find((p) => p.id === id)
       await apiService.deleteProject(project.slug)
-      setProjects(projects.filter(p => p.id !== id))
+      setProjects(projects.filter((p) => p.id !== id))
     } catch (error) {
       console.error('Failed to delete project:', error)
       alert('Failed to delete project')
@@ -241,7 +186,6 @@ export default function ProjectsManager() {
     e.preventDefault()
     try {
       const data = new FormData()
-
       data.append('title', formData.title || '')
       data.append('description', formData.description || '')
       data.append('url', formData.url || '')
@@ -251,42 +195,27 @@ export default function ProjectsManager() {
       data.append('is_featured', String(!!formData.is_featured))
       data.append('is_published', String(!!formData.is_published))
 
-      if (thumbnailFile) {
-        data.append('thumbnail', thumbnailFile)
-      }
+      if (thumbnailFile) data.append('thumbnail', thumbnailFile)
 
-      if (galleryItems.length > 0) {
-        galleryItems.forEach((it) => {
-          if (!it.file) return
-          data.append('images', it.file)
-          data.append('captions', it.caption || '')
-        })
-      }
+      galleryItems.forEach((it) => {
+        if (!it.file) return
+        data.append('images', it.file)
+        data.append('captions', it.caption || '')
+      })
+      if (editingId && replaceImages) data.append('replace_images', 'true')
 
-      if (editingId && replaceImages) {
-        data.append('replace_images', 'true')
-      }
-
-      if (videoItems.length > 0) {
-        videoItems.forEach((it) => {
-          if (!it.file) return
-          data.append('videos', it.file)
-          data.append('video_captions', it.caption || '')
-        })
-      }
-
-      if (editingId && replaceVideos) {
-        data.append('replace_videos', 'true')
-      }
+      videoItems.forEach((it) => {
+        if (!it.file) return
+        data.append('videos', it.file)
+        data.append('video_captions', it.caption || '')
+      })
+      if (editingId && replaceVideos) data.append('replace_videos', 'true')
 
       if (editingId) {
-        const project = projects.find(p => p.id === editingId)
+        const project = projects.find((p) => p.id === editingId)
         await apiService.updateProject(project.slug, data)
       } else {
-        if (!thumbnailFile) {
-          alert('Thumbnail is required')
-          return
-        }
+        if (!thumbnailFile) { alert('Thumbnail is required'); return }
         await apiService.createProject(data)
       }
 
@@ -294,18 +223,43 @@ export default function ProjectsManager() {
       loadProjects()
     } catch (error) {
       console.error('Failed to save project:', error)
-      if (error?.response?.data) {
-        console.error('Project save error response:', error.response.data)
-      }
+      if (error?.response?.data) console.error('Project save error response:', error.response.data)
       alert('Failed to save project')
     }
   }
 
   const columns = [
+    {
+      key: 'thumbnail',
+      label: '',
+      render: (val) => val
+        ? <img src={val} alt="" className="table-thumb" />
+        : <div className="table-thumb table-thumb--empty" />,
+    },
     { key: 'title', label: 'Title' },
-    { key: 'description', label: 'Description' },
-    { key: 'is_featured', label: 'Featured', render: (val) => val ? '✓' : '✗' },
-    { key: 'is_published', label: 'Published', render: (val) => val ? '✓' : '✗' },
+    {
+      key: 'project_type',
+      label: 'Type',
+      render: (val) => (
+        <span className={`badge ${val === 'live' ? 'badge--blue' : 'badge--purple'}`}>
+          {val === 'live' ? 'Live' : 'Gallery'}
+        </span>
+      ),
+    },
+    {
+      key: 'is_featured',
+      label: 'Featured',
+      render: (val) => (
+        <span className={`badge ${val ? 'badge--orange' : 'badge--gray'}`}>{val ? 'Yes' : '—'}</span>
+      ),
+    },
+    {
+      key: 'is_published',
+      label: 'Status',
+      render: (val) => (
+        <span className={`badge ${val ? 'badge--green' : 'badge--gray'}`}>{val ? 'Live' : 'Draft'}</span>
+      ),
+    },
   ]
 
   return (
@@ -313,7 +267,7 @@ export default function ProjectsManager() {
       <div className="manager-header">
         <h2>Projects</h2>
         <button className="btn-primary" onClick={handleAdd}>
-          <Plus size={20} /> Add Project
+          <Plus size={16} /> Add Project
         </button>
       </div>
 
@@ -333,7 +287,6 @@ export default function ProjectsManager() {
             onChange={handleThumbnailChange}
             required={!editingId}
           />
-
           <FormField
             label="Title"
             value={formData.title}
@@ -354,7 +307,7 @@ export default function ProjectsManager() {
             onChange={(e) => setFormData({ ...formData, url: e.target.value })}
           />
           <FormField
-            label="GitHub Repo (Optional)"
+            label="GitHub Repo (optional)"
             type="url"
             value={formData.github_url}
             onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
@@ -367,7 +320,7 @@ export default function ProjectsManager() {
             onChange={(e) => setFormData({ ...formData, project_type: e.target.value })}
             options={[
               { value: 'live', label: 'Live Site / Web App' },
-              { value: 'local', label: 'Local Project / Gallery' }
+              { value: 'local', label: 'Local Project / Gallery' },
             ]}
           />
           <FormField
@@ -376,6 +329,7 @@ export default function ProjectsManager() {
             value={formData.order}
             onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
           />
+
           <div className="checkbox-group">
             <label>
               <input
@@ -395,88 +349,66 @@ export default function ProjectsManager() {
             </label>
           </div>
 
+          {/* ── Gallery images (local projects only) ── */}
           {formData.project_type === 'local' && (
             <div className="form-field">
               <label>Project Images</label>
-            <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
-              <input type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} />
-            </div>
+              <div className="upload-zone">
+                <input type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} />
+              </div>
 
-            {pendingGalleryItems.length > 0 ? (
-              <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <div>{pendingGalleryItems.length} pending image(s)</div>
-                  <button type="button" className="btn-cancel" onClick={clearPendingGalleryItems}>
-                    Clear pending
-                  </button>
-                </div>
-
-                <input
-                  type="text"
-                  value={pendingCaption}
-                  onChange={(e) => setPendingCaption(e.target.value)}
-                  placeholder="One caption applied to ALL selected images"
-                />
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
-                  {pendingGalleryItems.map((it) => (
-                    <div key={it.key} style={{ height: 120, borderRadius: 10, overflow: 'hidden', background: 'rgba(0,0,0,0.05)' }}>
-                      <img src={it.previewUrl} alt="Pending" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    </div>
-                  ))}
-                </div>
-
-                <div>
-                  <button type="button" className="btn-submit" onClick={commitPendingImages}>
+              {pendingGalleryItems.length > 0 && (
+                <div className="pending-upload">
+                  <div className="pending-upload__header">
+                    <span>{pendingGalleryItems.length} image(s) selected</span>
+                    <button type="button" className="btn-ghost-sm" onClick={() => { setPendingGalleryItems((p) => { revokeAll(p); return [] }); setPendingCaption('') }}>
+                      Clear
+                    </button>
+                  </div>
+                  <input
+                    className="caption-input"
+                    type="text"
+                    value={pendingCaption}
+                    onChange={(e) => setPendingCaption(e.target.value)}
+                    placeholder="Caption for all selected images"
+                  />
+                  <div className="media-preview-grid">
+                    {pendingGalleryItems.map((it) => (
+                      <div key={it.key} className="media-preview-item">
+                        <img src={it.previewUrl} alt="Preview" />
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" className="btn-primary" onClick={commitPendingImages}>
                     Add images
                   </button>
                 </div>
-              </div>
-            ) : null}
+              )}
 
-            {galleryItems.length > 0 ? (
-              <div style={{ display: 'grid', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <div>{galleryItems.length} image(s) added</div>
-                  <button type="button" className="btn-cancel" onClick={clearGalleryItems}>
-                    Clear
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-                  {galleryItems.map((it) => (
-                    <div key={it.key} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: 'rgba(0,0,0,0.05)' }}>
-                      <div style={{ height: 140 }}>
-                        <img
-                          src={it.previewUrl}
-                          alt="Selected"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        />
+              {galleryItems.length > 0 && (
+                <div className="committed-upload">
+                  <div className="committed-upload__header">
+                    <span>{galleryItems.length} image(s) queued</span>
+                    <button type="button" className="btn-ghost-sm" onClick={resetGalleryItems}>Clear all</button>
+                  </div>
+                  <div className="media-grid">
+                    {galleryItems.map((it) => (
+                      <div key={it.key} className="media-card">
+                        <div className="media-card__thumb">
+                          <img src={it.previewUrl} alt="Selected" />
+                        </div>
+                        <button type="button" className="media-card__remove" onClick={() => removeGalleryItem(it.key)} aria-label="Remove">×</button>
+                        {it.caption && <div className="media-card__caption">{it.caption}</div>}
                       </div>
-
-                      <button
-                        type="button"
-                        className="btn-cancel"
-                        style={{ position: 'absolute', right: 8, top: 8, padding: '4px 8px' }}
-                        onClick={() => removeGalleryItem(it.key)}
-                        aria-label="Remove image"
-                      >
-                        X
-                      </button>
-
-                      <div style={{ padding: 10, display: 'grid', gap: 8 }}>
-                        <div style={{ fontSize: 12, opacity: 0.8 }}>{it.caption || ''}</div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              )}
             </div>
           )}
 
           {editingId && formData.project_type === 'local' && (
-            <div className="checkbox-group">
+            <div className="replace-section">
               <label>
                 <input
                   type="checkbox"
@@ -488,66 +420,56 @@ export default function ProjectsManager() {
             </div>
           )}
 
+          {/* ── Videos (local projects only) ── */}
           {formData.project_type === 'local' && (
             <div className="form-field">
               <label>Project Videos</label>
-              <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
+              <div className="upload-zone">
                 <input type="file" accept="video/*" multiple onChange={handleVideoFilesChange} />
               </div>
 
               {pendingVideoItems.length > 0 && (
-                <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                    <div>{pendingVideoItems.length} pending video(s)</div>
-                    <button type="button" className="btn-cancel" onClick={() => { setPendingVideoItems((p) => { revokeAll(p); return [] }); setPendingVideoCaption('') }}>
-                      Clear pending
+                <div className="pending-upload">
+                  <div className="pending-upload__header">
+                    <span>{pendingVideoItems.length} video(s) selected</span>
+                    <button type="button" className="btn-ghost-sm" onClick={() => { setPendingVideoItems((p) => { revokeAll(p); return [] }); setPendingVideoCaption('') }}>
+                      Clear
                     </button>
                   </div>
-
                   <input
+                    className="caption-input"
                     type="text"
                     value={pendingVideoCaption}
                     onChange={(e) => setPendingVideoCaption(e.target.value)}
-                    placeholder="Caption applied to all selected videos"
+                    placeholder="Caption for all selected videos"
                   />
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                  <div className="media-preview-grid">
                     {pendingVideoItems.map((it) => (
-                      <div key={it.key} style={{ height: 120, borderRadius: 10, overflow: 'hidden', background: 'rgba(0,0,0,0.06)' }}>
-                        <video src={it.previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} muted preload="metadata" />
+                      <div key={it.key} className="media-preview-item">
+                        <video src={it.previewUrl} muted preload="metadata" />
                       </div>
                     ))}
                   </div>
-
-                  <button type="button" className="btn-submit" onClick={commitPendingVideos}>
+                  <button type="button" className="btn-primary" onClick={commitPendingVideos}>
                     Add videos
                   </button>
                 </div>
               )}
 
               {videoItems.length > 0 && (
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                    <div>{videoItems.length} video(s) added</div>
-                    <button type="button" className="btn-cancel" onClick={resetVideoItems}>Clear</button>
+                <div className="committed-upload">
+                  <div className="committed-upload__header">
+                    <span>{videoItems.length} video(s) queued</span>
+                    <button type="button" className="btn-ghost-sm" onClick={resetVideoItems}>Clear all</button>
                   </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                  <div className="media-grid">
                     {videoItems.map((it) => (
-                      <div key={it.key} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: 'rgba(0,0,0,0.06)' }}>
-                        <div style={{ height: 140 }}>
-                          <video src={it.previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} muted preload="metadata" />
+                      <div key={it.key} className="media-card">
+                        <div className="media-card__thumb">
+                          <video src={it.previewUrl} muted preload="metadata" />
                         </div>
-                        <button
-                          type="button"
-                          className="btn-cancel"
-                          style={{ position: 'absolute', right: 8, top: 8, padding: '4px 8px' }}
-                          onClick={() => removeVideoItem(it.key)}
-                          aria-label="Remove video"
-                        >
-                          X
-                        </button>
-                        <div style={{ padding: '8px 10px', fontSize: 12, opacity: 0.8 }}>{it.caption || ''}</div>
+                        <button type="button" className="media-card__remove" onClick={() => removeVideoItem(it.key)} aria-label="Remove">×</button>
+                        {it.caption && <div className="media-card__caption">{it.caption}</div>}
                       </div>
                     ))}
                   </div>
@@ -557,7 +479,7 @@ export default function ProjectsManager() {
           )}
 
           {editingId && formData.project_type === 'local' && (
-            <div className="checkbox-group">
+            <div className="replace-section">
               <label>
                 <input
                   type="checkbox"

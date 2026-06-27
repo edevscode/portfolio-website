@@ -236,10 +236,6 @@ export default function ProjectDetailsViewer() {
     if (!project) return []
     const arr = []
 
-    if (project.thumbnail) {
-      arr.push({ src: normalizeMediaUrl(project.thumbnail), caption: 'Thumbnail', type: 'image' })
-    }
-
     if (Array.isArray(project.image_items) && project.image_items.length > 0) {
       project.image_items
         .slice()
@@ -341,7 +337,7 @@ export default function ProjectDetailsViewer() {
                       </div>
                     </div>
                   )}
-                  {it.caption && it.caption !== 'Thumbnail' && (
+                  {it.caption && (
                     <div className="gallery-item-caption" style={{ color: colors.text }}>
                       {it.caption}
                     </div>
