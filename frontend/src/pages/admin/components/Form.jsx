@@ -53,19 +53,23 @@ export function FormField({ label, name, type = 'text', value, onChange, placeho
   )
 }
 
-export function ModalForm({ title, onSubmit, onClose, children, submitText = 'Save' }) {
+export function ModalForm({ title, onSubmit, onClose, children, submitText = 'Save', submitting = false }) {
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={!submitting ? onClose : undefined}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{title}</h2>
-          <button className="close-modal" onClick={onClose} aria-label="Close">×</button>
+          <button className="close-modal" onClick={onClose} aria-label="Close" disabled={submitting}>×</button>
         </div>
         <form onSubmit={onSubmit} className="modal-form">
           {children}
           <div className="modal-actions">
-            <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-submit">{submitText}</button>
+            <button type="button" className="btn-cancel" onClick={onClose} disabled={submitting}>Cancel</button>
+            <button type="submit" className="btn-submit" disabled={submitting}>
+              {submitting ? (
+                <><span className="btn-spinner" /> Saving…</>
+              ) : submitText}
+            </button>
           </div>
         </form>
       </div>

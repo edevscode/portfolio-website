@@ -322,6 +322,34 @@
   line-height: 1.4;
 }
 
+.media-card__caption-input {
+  display: block;
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #374151;
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  background: #fff;
+  box-sizing: border-box;
+  transition: background 0.12s;
+}
+.media-card__caption-input:focus {
+  outline: none;
+  background: #f8fafc;
+}
+.media-card__caption-input::placeholder { color: #94a3b8; }
+
+/* Existing (non-editable) media cards */
+.media-card--existing {
+  opacity: 0.85;
+}
+
+.media-grid--sm {
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+}
+
 /* Replace checkbox section */
 .replace-section {
   padding: 12px 14px;
