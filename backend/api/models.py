@@ -126,13 +126,29 @@ class ProjectImage(models.Model):
 
 
 def _video_storage():
-    """Use VideoMediaCloudinaryStorage in production so videos are uploaded with
-    resource_type='video' instead of the default 'image' that MediaCloudinaryStorage uses."""
+    """Return a Cloudinary video storage in production.
+
+    Uses upload_large() (chunked, 20 MB per chunk) instead of the default
+    upload() so files larger than Cloudinary's 25 MB single-request limit are
+    accepted without a 413 error.
+    """
     from django.conf import settings
     if getattr(settings, 'CLOUDINARY_URL', ''):
         try:
             from cloudinary_storage.storage import VideoMediaCloudinaryStorage
-            return VideoMediaCloudinaryStorage()
+            import cloudinary.uploader
+
+            class _ChunkedVideoStorage(VideoMediaCloudinaryStorage):
+                def _upload(self, name, content):
+                    return cloudinary.uploader.upload_large(
+                        content,
+                        resource_type='video',
+                        use_filename=True,
+                        unique_filename=True,
+                        chunk_size=20 * 1024 * 1024,  # 20 MB per chunk
+                    )
+
+            return _ChunkedVideoStorage()
         except ImportError:
             pass
     from django.core.files.storage import FileSystemStorage
