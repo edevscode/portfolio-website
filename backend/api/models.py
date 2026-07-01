@@ -139,6 +139,12 @@ def _video_storage():
             import cloudinary.uploader
 
             class _ChunkedVideoStorage(VideoMediaCloudinaryStorage):
+                def _save(self, name, content):
+                    # Skip cloudinary_storage's hard-coded 100 MB size check;
+                    # our _upload uses upload_large() which handles any size.
+                    response = self._upload(name, content)
+                    return response['public_id']
+
                 def _upload(self, name, content):
                     return cloudinary.uploader.upload_large(
                         content,

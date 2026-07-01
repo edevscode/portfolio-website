@@ -267,8 +267,18 @@ LOGGING = {
     },
 }
 
+# Allow large file uploads (200 MB target; Django uses temp files for anything > 2.5 MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024 * 1024  # non-file form data cap
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024   # files > 10 MB go to disk
+
 # Cloudinary & Static Files Storage
 CLOUDINARY_URL = config('CLOUDINARY_URL', default='')
+CLOUDINARY_STORAGE = {
+    # Raise cloudinary_storage's Python-side size check to 250 MB so large
+    # videos pass through to our chunked upload_large() call.
+    'MAX_UPLOAD_SIZE': 250 * 1024 * 1024,
+}
+
 if CLOUDINARY_URL:
     STORAGES = {
         'default': {
