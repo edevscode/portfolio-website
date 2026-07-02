@@ -28,12 +28,11 @@ export default function ProjectsManager() {
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [thumbnailPreview, setThumbnailPreview] = useState(null)
 
+  // Single-step queues — files go here immediately on selection, no intermediate commit
   const [galleryItems, setGalleryItems] = useState([])
-  const [pendingGalleryItems, setPendingGalleryItems] = useState([])
   const [replaceImages, setReplaceImages] = useState(false)
 
   const [videoItems, setVideoItems] = useState([])
-  const [pendingVideoItems, setPendingVideoItems] = useState([])
   const [replaceVideos, setReplaceVideos] = useState(false)
 
   useEffect(() => { loadProjects() }, [])
@@ -56,9 +55,7 @@ export default function ProjectsManager() {
 
   const resetMedia = () => {
     setGalleryItems((prev) => { revokeAll(prev); return [] })
-    setPendingGalleryItems((prev) => { revokeAll(prev); return [] })
     setVideoItems((prev) => { revokeAll(prev); return [] })
-    setPendingVideoItems((prev) => { revokeAll(prev); return [] })
     if (thumbnailPreview) try { URL.revokeObjectURL(thumbnailPreview) } catch { }
     setThumbnailPreview(null)
     setThumbnailFile(null)
@@ -93,43 +90,25 @@ export default function ProjectsManager() {
     setThumbnailPreview(file ? URL.createObjectURL(file) : null)
   }
 
-  const removeThumbnailPreview = () => {
-    if (thumbnailPreview) try { URL.revokeObjectURL(thumbnailPreview) } catch { }
-    setThumbnailPreview(null)
-    setThumbnailFile(null)
-  }
-
-  // ── Gallery ──
+  // ── Gallery images — files go straight into the queue ──
   const handleGalleryFilesChange = (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
-    setPendingGalleryItems((prev) => { revokeAll(prev); return [] })
     const newItems = files.map((file) => ({
       key: `${file.name}|${file.size}|${file.lastModified}`,
       file,
       previewUrl: URL.createObjectURL(file),
       caption: '',
     }))
-    setPendingGalleryItems(newItems)
-    e.target.value = ''
-  }
-
-  const updatePendingCaption = (key, caption) => {
-    setPendingGalleryItems((prev) => prev.map((it) => it.key === key ? { ...it, caption } : it))
-  }
-
-  const commitPendingImages = () => {
-    if (!pendingGalleryItems.length) return
     setGalleryItems((prev) => {
       const existingKeys = new Set(prev.map((it) => it.key))
-      const next = [...prev]
-      pendingGalleryItems.forEach((it) => {
-        if (existingKeys.has(it.key)) { try { URL.revokeObjectURL(it.previewUrl) } catch { } return }
-        next.push(it)
+      // revoke preview URLs for duplicates before discarding
+      newItems.filter((it) => existingKeys.has(it.key)).forEach((it) => {
+        try { URL.revokeObjectURL(it.previewUrl) } catch { }
       })
-      return next
+      return [...prev, ...newItems.filter((it) => !existingKeys.has(it.key))]
     })
-    setPendingGalleryItems([])
+    e.target.value = ''
   }
 
   const updateGalleryCaption = (key, caption) => {
@@ -144,37 +123,24 @@ export default function ProjectsManager() {
     })
   }
 
-  // ── Videos ──
+  // ── Videos — files go straight into the queue ──
   const handleVideoFilesChange = (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
-    setPendingVideoItems((prev) => { revokeAll(prev); return [] })
     const newItems = files.map((file) => ({
       key: `${file.name}|${file.size}|${file.lastModified}`,
       file,
       previewUrl: URL.createObjectURL(file),
       caption: '',
     }))
-    setPendingVideoItems(newItems)
-    e.target.value = ''
-  }
-
-  const updatePendingVideoCaption = (key, caption) => {
-    setPendingVideoItems((prev) => prev.map((it) => it.key === key ? { ...it, caption } : it))
-  }
-
-  const commitPendingVideos = () => {
-    if (!pendingVideoItems.length) return
     setVideoItems((prev) => {
       const existingKeys = new Set(prev.map((it) => it.key))
-      const next = [...prev]
-      pendingVideoItems.forEach((it) => {
-        if (existingKeys.has(it.key)) { try { URL.revokeObjectURL(it.previewUrl) } catch { } return }
-        next.push(it)
+      newItems.filter((it) => existingKeys.has(it.key)).forEach((it) => {
+        try { URL.revokeObjectURL(it.previewUrl) } catch { }
       })
-      return next
+      return [...prev, ...newItems.filter((it) => !existingKeys.has(it.key))]
     })
-    setPendingVideoItems([])
+    e.target.value = ''
   }
 
   const updateVideoCaption = (key, caption) => {
@@ -352,7 +318,6 @@ export default function ProjectsManager() {
             <span className="form-section__label">Settings</span>
           </div>
 
-          {/* Project type radio cards */}
           <div className="form-field">
             <label>Project Type</label>
             <div className="type-cards">
@@ -439,7 +404,11 @@ export default function ProjectsManager() {
               <div className="thumb-upload-controls">
                 <input type="file" accept="image/*" onChange={handleThumbnailChange} />
                 {thumbnailPreview && (
-                  <button type="button" className="btn-ghost-sm" onClick={removeThumbnailPreview}>
+                  <button type="button" className="btn-ghost-sm" onClick={() => {
+                    try { URL.revokeObjectURL(thumbnailPreview) } catch { }
+                    setThumbnailPreview(null)
+                    setThumbnailFile(null)
+                  }}>
                     Remove selection
                   </button>
                 )}
@@ -452,7 +421,6 @@ export default function ProjectsManager() {
             <div className="form-field">
               <label>Project Images</label>
 
-              {/* Existing images in edit mode */}
               {editingId && existingImages.length > 0 && (
                 <div className="existing-media">
                   <div className="existing-media__header">
@@ -460,11 +428,7 @@ export default function ProjectsManager() {
                       <Images size={14} />
                       {existingImages.length} current image{existingImages.length !== 1 ? 's' : ''}
                     </span>
-                    <button
-                      type="button"
-                      className="btn-ghost-sm"
-                      onClick={() => setReplaceImages((v) => !v)}
-                    >
+                    <button type="button" className="btn-ghost-sm" onClick={() => setReplaceImages((v) => !v)}>
                       {replaceImages ? 'Keep existing' : 'Replace all'}
                     </button>
                   </div>
@@ -487,52 +451,18 @@ export default function ProjectsManager() {
                 </div>
               )}
 
-              {/* File picker for new images */}
+              {/* Picker — files go straight into the grid below */}
               <div className="upload-zone">
                 <input type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} />
               </div>
 
-              {/* Pending — set per-image captions before committing */}
-              {pendingGalleryItems.length > 0 && (
-                <div className="pending-upload">
-                  <div className="pending-upload__header">
-                    <span>{pendingGalleryItems.length} image{pendingGalleryItems.length !== 1 ? 's' : ''} selected — set captions below</span>
-                    <button
-                      type="button"
-                      className="btn-ghost-sm"
-                      onClick={() => setPendingGalleryItems((p) => { revokeAll(p); return [] })}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="media-grid">
-                    {pendingGalleryItems.map((it) => (
-                      <div key={it.key} className="media-card">
-                        <div className="media-card__thumb">
-                          <img src={it.previewUrl} alt="Preview" />
-                        </div>
-                        <input
-                          className="media-card__caption-input"
-                          type="text"
-                          value={it.caption}
-                          onChange={(e) => updatePendingCaption(it.key, e.target.value)}
-                          placeholder="Caption…"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" className="btn-primary" onClick={commitPendingImages}>
-                    Add {pendingGalleryItems.length} image{pendingGalleryItems.length !== 1 ? 's' : ''} to queue
-                  </button>
-                </div>
-              )}
-
-              {/* Committed queue */}
               {galleryItems.length > 0 && (
                 <div className="committed-upload">
                   <div className="committed-upload__header">
                     <span>{galleryItems.length} image{galleryItems.length !== 1 ? 's' : ''} queued for upload</span>
-                    <button type="button" className="btn-ghost-sm" onClick={() => setGalleryItems((p) => { revokeAll(p); return [] })}>Clear all</button>
+                    <button type="button" className="btn-ghost-sm" onClick={() => setGalleryItems((p) => { revokeAll(p); return [] })}>
+                      Clear all
+                    </button>
                   </div>
                   <div className="media-grid">
                     {galleryItems.map((it) => (
@@ -561,7 +491,6 @@ export default function ProjectsManager() {
             <div className="form-field">
               <label>Project Videos</label>
 
-              {/* Existing videos in edit mode */}
               {editingId && existingVideos.length > 0 && (
                 <div className="existing-media">
                   <div className="existing-media__header">
@@ -569,11 +498,7 @@ export default function ProjectsManager() {
                       <Film size={14} />
                       {existingVideos.length} current video{existingVideos.length !== 1 ? 's' : ''}
                     </span>
-                    <button
-                      type="button"
-                      className="btn-ghost-sm"
-                      onClick={() => setReplaceVideos((v) => !v)}
-                    >
+                    <button type="button" className="btn-ghost-sm" onClick={() => setReplaceVideos((v) => !v)}>
                       {replaceVideos ? 'Keep existing' : 'Replace all'}
                     </button>
                   </div>
@@ -596,49 +521,18 @@ export default function ProjectsManager() {
                 </div>
               )}
 
+              {/* Picker — files go straight into the grid below */}
               <div className="upload-zone">
                 <input type="file" accept="video/*" multiple onChange={handleVideoFilesChange} />
               </div>
-
-              {pendingVideoItems.length > 0 && (
-                <div className="pending-upload">
-                  <div className="pending-upload__header">
-                    <span>{pendingVideoItems.length} video{pendingVideoItems.length !== 1 ? 's' : ''} selected — set captions below</span>
-                    <button
-                      type="button"
-                      className="btn-ghost-sm"
-                      onClick={() => setPendingVideoItems((p) => { revokeAll(p); return [] })}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="media-grid">
-                    {pendingVideoItems.map((it) => (
-                      <div key={it.key} className="media-card">
-                        <div className="media-card__thumb">
-                          <video src={it.previewUrl} muted preload="metadata" />
-                        </div>
-                        <input
-                          className="media-card__caption-input"
-                          type="text"
-                          value={it.caption}
-                          onChange={(e) => updatePendingVideoCaption(it.key, e.target.value)}
-                          placeholder="Caption…"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" className="btn-primary" onClick={commitPendingVideos}>
-                    Add {pendingVideoItems.length} video{pendingVideoItems.length !== 1 ? 's' : ''} to queue
-                  </button>
-                </div>
-              )}
 
               {videoItems.length > 0 && (
                 <div className="committed-upload">
                   <div className="committed-upload__header">
                     <span>{videoItems.length} video{videoItems.length !== 1 ? 's' : ''} queued for upload</span>
-                    <button type="button" className="btn-ghost-sm" onClick={() => setVideoItems((p) => { revokeAll(p); return [] })}>Clear all</button>
+                    <button type="button" className="btn-ghost-sm" onClick={() => setVideoItems((p) => { revokeAll(p); return [] })}>
+                      Clear all
+                    </button>
                   </div>
                   <div className="media-grid">
                     {videoItems.map((it) => (
