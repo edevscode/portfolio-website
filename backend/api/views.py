@@ -156,9 +156,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project.save(update_fields=['images'])
 
     def _save_project_videos(self, project, request, replace=False):
-        if replace:
-            ProjectVideo.objects.filter(project=project).delete()
-
         files = []
         captions = []
 
@@ -179,6 +176,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if not files:
             logger.warning('[video] no files in request — skipping video save')
             return
+
+        # Only delete existing videos once we know new ones are actually coming
+        if replace:
+            ProjectVideo.objects.filter(project=project).delete()
 
         start_order = ProjectVideo.objects.filter(project=project).count()
 

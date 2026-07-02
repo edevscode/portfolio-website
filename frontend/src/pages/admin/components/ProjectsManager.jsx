@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Globe, Image, Images, Film } from 'lucide-react'
+import { Plus, Globe, Image, GalleryHorizontal, Film } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import { FormField, ModalForm, Table } from './Form'
 import './Manager.css'
@@ -425,7 +425,7 @@ export default function ProjectsManager() {
                 <div className="existing-media">
                   <div className="existing-media__header">
                     <span className="existing-media__label">
-                      <Images size={14} />
+                      <GalleryHorizontal size={14} />
                       {existingImages.length} current image{existingImages.length !== 1 ? 's' : ''}
                     </span>
                     <button type="button" className="btn-ghost-sm" onClick={() => setReplaceImages((v) => !v)}>
