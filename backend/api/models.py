@@ -140,32 +140,43 @@ def _video_storage():
 
             class _ChunkedVideoStorage(VideoMediaCloudinaryStorage):
                 def _save(self, name, content):
-                    # Skip cloudinary_storage's hard-coded 100 MB size check.
+                    import logging as _logging
+                    _log = _logging.getLogger(__name__)
+                    _log.info('[cloudinary] _save called: name=%s size=%s', name, getattr(content, 'size', '?'))
                     response = self._upload(name, content)
+                    _log.info('[cloudinary] _upload response keys=%s public_id=%s',
+                              list(response.keys()) if response else None,
+                              response.get('public_id') if response else None)
                     if not response or 'public_id' not in response:
                         raise ValueError('Cloudinary upload_large returned no public_id — upload may have failed.')
                     return response['public_id']
 
                 def _upload(self, name, content):
                     import os
-                    # For large files Django uses TemporaryUploadedFile (on-disk).
-                    # upload_large is most reliable with a file path; fall back to
-                    # the file object for in-memory uploads.
+                    import logging as _logging
+                    _log = _logging.getLogger(__name__)
                     file_arg = (
                         content.temporary_file_path()
                         if hasattr(content, 'temporary_file_path')
                         else content
                     )
-                    # Preserve the upload_to folder in the public_id so the URL
-                    # matches what cloudinary_storage expects (path minus extension).
                     public_id = os.path.splitext(name)[0]
-                    return cloudinary.uploader.upload_large(
-                        file_arg,
-                        resource_type='video',
-                        public_id=public_id,
-                        overwrite=True,
-                        chunk_size=20 * 1024 * 1024,  # 20 MB per chunk
-                    )
+                    _log.info('[cloudinary] upload_large start: public_id=%s file_arg_type=%s',
+                              public_id, type(file_arg).__name__)
+                    try:
+                        result = cloudinary.uploader.upload_large(
+                            file_arg,
+                            resource_type='video',
+                            public_id=public_id,
+                            overwrite=True,
+                            chunk_size=20 * 1024 * 1024,
+                        )
+                        _log.info('[cloudinary] upload_large done: secure_url=%s',
+                                  result.get('secure_url') if result else None)
+                        return result
+                    except Exception as exc:
+                        _log.error('[cloudinary] upload_large EXCEPTION: %s', exc)
+                        raise
 
             return _ChunkedVideoStorage()
         except ImportError:
