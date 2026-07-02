@@ -3,6 +3,7 @@ import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { API_BASE_URL } from '../../../services/apiService'
 import ResumeViewer from './ResumeViewer'
+import Prose from '../../../components/Prose'
 import './About.css'
 
 export default function About({ about }) {
@@ -60,9 +61,9 @@ export default function About({ about }) {
           <div className="about-content">
             {about?.about_text && (
               <div className="about-block">
-                <p style={{ color: colors.text }}>
+                <Prose style={{ color: colors.text }}>
                   {about.about_text}
-                </p>
+                </Prose>
               </div>
             )}
             

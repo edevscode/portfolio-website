@@ -169,7 +169,6 @@
   line-height: 1.6;
   font-family: inherit;
   opacity: 0.85;
-  white-space: pre-wrap;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;

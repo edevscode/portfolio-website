@@ -179,12 +179,9 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
 }
 
-.project-details-description pre {
-  margin: 0;
-  font-family: inherit;
+.project-details-description .prose {
   font-size: 16px;
   line-height: 1.8;
-  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -288,7 +285,7 @@
     margin-bottom: 40px;
   }
 
-  .project-details-description pre {
+  .project-details-description .prose {
     font-size: 14px;
   }
 

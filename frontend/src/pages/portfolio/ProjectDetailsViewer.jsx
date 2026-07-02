@@ -8,6 +8,7 @@ import { useSeasonContext } from '../../context/useSeasonContext'
 import { SeasonalBackground } from '../../features/seasonal/components/SeasonalEffects'
 import { SeasonalDecorations } from '../../features/seasonal/components/SeasonalDecorations'
 import Footer from './components/Footer'
+import Prose from '../../components/Prose'
 import './ProjectDetailsViewer.css'
 
 function normalizeMediaUrl(url) {
@@ -306,7 +307,7 @@ export default function ProjectDetailsViewer() {
 
         {project.description && (
           <section className="project-details-description" style={{ backgroundColor: colors.secondary, borderColor: colors.accent }}>
-            <pre style={{ color: colors.text }}>{project.description}</pre>
+            <Prose style={{ color: colors.text }}>{project.description}</Prose>
           </section>
         )}
 

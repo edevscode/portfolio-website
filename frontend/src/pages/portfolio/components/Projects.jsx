@@ -6,6 +6,20 @@ import { API_BASE_URL } from '../../../services/apiService'
 import { getReadableTextColor } from '../../../utils/color'
 import './Projects.css'
 
+function stripMarkdown(text) {
+  if (!text) return ''
+  return text
+    .replace(/#{1,6}\s/g, '')       // headings
+    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
+    .replace(/\*(.+?)\*/g, '$1')     // italic
+    .replace(/`(.+?)`/g, '$1')       // inline code
+    .replace(/^[-*+]\s/gm, '')       // bullet points
+    .replace(/^\d+\.\s/gm, '')       // numbered lists
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // links
+    .replace(/\n+/g, ' ')            // collapse newlines to space
+    .trim()
+}
+
 function normalizeMediaUrl(url) {
   if (!url) return ''
   if (typeof url !== 'string') return ''
@@ -246,9 +260,9 @@ export default function Projects({ projects }) {
                         </div>
 
                         {project.description && (
-                          <pre className="summary-card-description" style={{ color: colors.text, margin: 0 }}>
-                            {project.description}
-                          </pre>
+                          <p className="summary-card-description" style={{ color: colors.text }}>
+                            {stripMarkdown(project.description)}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -284,9 +298,9 @@ export default function Projects({ projects }) {
                       <div className="summary-card-content">
                         <h3 style={{ color: colors.primary }}>{project.title}</h3>
                         {project.description && (
-                          <pre className="summary-card-description" style={{ color: colors.text }}>
-                            {project.description}
-                          </pre>
+                          <p className="summary-card-description" style={{ color: colors.text }}>
+                            {stripMarkdown(project.description)}
+                          </p>
                         )}
                       </div>
                     </div>

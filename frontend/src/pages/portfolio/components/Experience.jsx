@@ -1,6 +1,7 @@
 import React from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
+import Prose from '../../../components/Prose'
 import './Experience.css'
 
 export default function Experience({ experiences }) {
@@ -53,9 +54,9 @@ export default function Experience({ experiences }) {
                     {exp.company}
                   </h4>
                 ) : null}
-                <p style={{ color: colors.text }}>
+                <Prose style={{ color: colors.text }}>
                   {exp.description}
-                </p>
+                </Prose>
               </div>
             </div>
           ))}
