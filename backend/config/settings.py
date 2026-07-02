@@ -264,6 +264,11 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
         },
+        'api': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
     },
 }
 

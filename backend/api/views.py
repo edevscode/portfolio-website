@@ -174,19 +174,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
             elif captions_value:
                 captions = [captions_value]
 
-        logger.info('[video] project=%s files_received=%d replace=%s', project.slug, len(files), replace)
+        logger.warning('[video] project=%s files_received=%d replace=%s', project.slug, len(files), replace)
 
         if not files:
-            logger.info('[video] no files in request — skipping video save')
+            logger.warning('[video] no files in request — skipping video save')
             return
 
         start_order = ProjectVideo.objects.filter(project=project).count()
 
         for idx, f in enumerate(files):
             caption = captions[idx] if idx < len(captions) else ''
-            logger.info('[video] uploading file %d/%d: name=%s size=%s has_tmp_path=%s',
-                        idx + 1, len(files), f.name, f.size,
-                        hasattr(f, 'temporary_file_path'))
+            logger.warning('[video] uploading file %d/%d: name=%s size=%s has_tmp_path=%s',
+                           idx + 1, len(files), f.name, f.size,
+                           hasattr(f, 'temporary_file_path'))
             try:
                 ProjectVideo.objects.create(
                     project=project,
@@ -194,9 +194,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     caption=caption,
                     order=start_order + idx,
                 )
-                logger.info('[video] file %d saved OK', idx + 1)
+                logger.warning('[video] file %d saved OK', idx + 1)
             except Exception as exc:
-                logger.error('[video] file %d FAILED: %s\n%s', idx + 1, exc, traceback.format_exc())
+                logger.warning('[video] file %d FAILED: %s\n%s', idx + 1, exc, traceback.format_exc())
                 raise
 
     def create(self, request, *args, **kwargs):
@@ -223,6 +223,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response({'detail': str(exc), 'traceback': tb}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update(self, request, *args, **kwargs):
+        logger.warning('[update] PATCH received: FILES_keys=%s DATA_keys=%s',
+                       list(request.FILES.keys()), list(request.data.keys()))
         replace_img = str(request.data.get('replace_images', '')).lower() in ('1', 'true', 'yes')
         replace_vid = str(request.data.get('replace_videos', '')).lower() in ('1', 'true', 'yes')
 
