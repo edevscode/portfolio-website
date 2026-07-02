@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { apiService, API_BASE_URL } from '../../services/apiService'
 import { cache, CACHE_KEYS, CACHE_TTL } from '../../services/cache'
@@ -29,7 +29,10 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
 }
 
-function ImageModal({ open, image, onClose }) {
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+
+function Lightbox({ items, idx, onClose, onPrev, onNext }) {
+  const image = items[idx]
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
@@ -37,38 +40,34 @@ function ImageModal({ open, image, onClose }) {
   const [dragStartOffset, setDragStartOffset] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
-    if (!open) return
     setZoom(1)
     setOffset({ x: 0, y: 0 })
-  }, [open, image?.src])
+  }, [idx])
 
   useEffect(() => {
-    if (!open) return
+    if (idx === null) return
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') onClose?.()
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowLeft') onPrev()
+      if (e.key === 'ArrowRight') onNext()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, onClose])
+  }, [idx, onClose, onPrev, onNext])
 
   useEffect(() => {
-    if (!open) return
-    const previous = document.body.style.overflow
+    if (idx === null) return
+    const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [open])
+    return () => { document.body.style.overflow = prev }
+  }, [idx])
 
-  if (!open || !image?.src) return null
+  if (idx === null || !image) return null
 
   const handleWheel = (e) => {
     e.preventDefault()
-    const delta = e.deltaY
-    const next = clamp(zoom + (delta > 0 ? -0.12 : 0.12), 1, 4)
-    if (next === 1) {
-      setOffset({ x: 0, y: 0 })
-    }
+    const next = clamp(zoom + (e.deltaY > 0 ? -0.12 : 0.12), 1, 4)
+    if (next === 1) setOffset({ x: 0, y: 0 })
     setZoom(next)
   }
 
@@ -81,79 +80,107 @@ function ImageModal({ open, image, onClose }) {
 
   const handlePointerMove = (e) => {
     if (!dragging) return
-    const dx = e.clientX - dragStart.x
-    const dy = e.clientY - dragStart.y
-    setOffset({ x: dragStartOffset.x + dx, y: dragStartOffset.y + dy })
+    setOffset({ x: dragStartOffset.x + e.clientX - dragStart.x, y: dragStartOffset.y + e.clientY - dragStart.y })
   }
 
-  const stopDragging = () => {
-    // If we've barely moved, we could consider it a click, but we can just handle click directly on the stage.
-    setDragging(false)
-  }
+  const stopDragging = () => setDragging(false)
 
   const handleStageClick = (e) => {
-    // If we dragged, don't trigger a click
-    if (Math.abs(e.clientX - dragStart.x) > 5 || Math.abs(e.clientY - dragStart.y) > 5) {
-      return
-    }
-    
-    // Toggle zoom
-    if (zoom > 1) {
-      setZoom(1)
-      setOffset({ x: 0, y: 0 })
-    } else {
-      setZoom(2.5)
-      // Ideally we zoom into the clicked point, but for simplicity, center zoom is fine.
-    }
+    if (Math.abs(e.clientX - dragStart.x) > 5 || Math.abs(e.clientY - dragStart.y) > 5) return
+    if (zoom > 1) { setZoom(1); setOffset({ x: 0, y: 0 }) } else setZoom(2.5)
   }
 
   return (
-    <div className="project-image-modal" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="project-image-modal__content" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="project-image-modal__close" onClick={onClose} aria-label="Close image">
-          ×
-        </button>
-        <div className="project-image-modal__hud" aria-hidden="true">
-          <div className="project-image-modal__zoom">{Math.round(zoom * 100)}%</div>
-          <div className="project-image-modal__hint">Click or scroll to zoom • Drag to pan</div>
-        </div>
-        <div
-          className={dragging ? 'project-image-modal__stage is-dragging' : 'project-image-modal__stage'}
-          style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
-          onWheel={handleWheel}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={stopDragging}
-          onPointerCancel={stopDragging}
-          onPointerLeave={stopDragging}
-          onClick={handleStageClick}
+    <div className="lightbox" role="dialog" aria-modal="true" onClick={onClose}>
+      {/* Counter */}
+      <div className="lightbox-counter">{idx + 1} / {items.length}</div>
+
+      {/* Close */}
+      <button type="button" className="lightbox-close" onClick={onClose} aria-label="Close">×</button>
+
+      {/* Prev */}
+      {idx > 0 && (
+        <button
+          type="button"
+          className="lightbox-nav lightbox-nav--prev"
+          onClick={(e) => { e.stopPropagation(); onPrev() }}
+          aria-label="Previous image"
         >
-          <img
-            src={image.src}
-            alt={image.alt || 'Project image'}
-            style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}
-            className="project-image-modal__img"
-          />
-        </div>
-        {image.caption ? <div className="project-image-modal__caption">{image.caption}</div> : null}
+          ‹
+        </button>
+      )}
+
+      {/* Next */}
+      {idx < items.length - 1 && (
+        <button
+          type="button"
+          className="lightbox-nav lightbox-nav--next"
+          onClick={(e) => { e.stopPropagation(); onNext() }}
+          aria-label="Next image"
+        >
+          ›
+        </button>
+      )}
+
+      {/* Stage */}
+      <div
+        className={`lightbox-stage${dragging ? ' is-dragging' : ''}`}
+        style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
+        onWheel={handleWheel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={stopDragging}
+        onPointerCancel={stopDragging}
+        onPointerLeave={stopDragging}
+        onClick={handleStageClick}
+      >
+        <img
+          src={image.src}
+          alt={image.alt || 'Project image'}
+          className="lightbox-img"
+          style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}
+        />
       </div>
+
+      {/* Hint */}
+      <div className="lightbox-hud">
+        <span>{Math.round(zoom * 100)}%</span>
+        <span>scroll to zoom · drag to pan · ← → to navigate</span>
+      </div>
+
+      {/* Caption */}
+      {image.caption && (
+        <div className="lightbox-caption">{image.caption}</div>
+      )}
     </div>
   )
 }
 
+// ── Play icon for video thumbnails ────────────────────────────────────────────
+
+function PlayIcon() {
+  return (
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" aria-hidden="true">
+      <circle cx="26" cy="26" r="26" fill="rgba(0,0,0,0.55)" />
+      <polygon points="21,17 39,26 21,35" fill="white" />
+    </svg>
+  )
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 export default function ProjectDetailsViewer() {
   const { slug } = useParams()
   const navigate = useNavigate()
-  
+
   const [project, setProject] = useState(null)
   const [portfolio, setPortfolio] = useState(null)
   const [loading, setLoading] = useState(true)
-  
+
   const { theme } = useTheme()
   const { config: seasonConfig } = useSeasonContext()
-  
-  const [modalImage, setModalImage] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const [lightboxIdx, setLightboxIdx] = useState(null)
 
   const colors = theme ? {
     primary: theme.primary_color || seasonConfig?.colors?.primary || '#1a472a',
@@ -169,9 +196,7 @@ export default function ProjectDetailsViewer() {
     accent: seasonConfig?.colors?.accent || '#4da6ff'
   }
 
-  useEffect(() => {
-    loadData()
-  }, [slug])
+  useEffect(() => { loadData() }, [slug])
 
   const loadData = async () => {
     const slugStr = String(slug)
@@ -179,58 +204,28 @@ export default function ProjectDetailsViewer() {
     const cachedPortfolio = cache.get(CACHE_KEYS.portfolio)
 
     if (cachedProject) {
-      // Instant render — data was prefetched
       setProject(cachedProject)
       setLoading(false)
       if (cachedPortfolio) setPortfolio(cachedPortfolio)
-
-      // Revalidate both in background
-      apiService.getProject(slugStr)
-        .then(res => {
-          cache.set(CACHE_KEYS.project(slugStr), res.data, CACHE_TTL.project)
-          setProject(res.data)
-        })
-        .catch(() => {})
-
-      apiService.getPortfolio()
-        .then(res => {
-          cache.set(CACHE_KEYS.portfolio, res.data, CACHE_TTL.portfolio)
-          setPortfolio(res.data)
-        })
-        .catch(() => {})
+      apiService.getProject(slugStr).then(res => { cache.set(CACHE_KEYS.project(slugStr), res.data, CACHE_TTL.project); setProject(res.data) }).catch(() => {})
+      apiService.getPortfolio().then(res => { cache.set(CACHE_KEYS.portfolio, res.data, CACHE_TTL.portfolio); setPortfolio(res.data) }).catch(() => {})
       return
     }
 
-    // Cache miss — fetch both, show spinner
     try {
       const [projectRes, portfolioRes] = await Promise.all([
         apiService.getProject(slugStr),
-        cachedPortfolio
-          ? Promise.resolve({ data: cachedPortfolio })
-          : apiService.getPortfolio(),
+        cachedPortfolio ? Promise.resolve({ data: cachedPortfolio }) : apiService.getPortfolio(),
       ])
       cache.set(CACHE_KEYS.project(slugStr), projectRes.data, CACHE_TTL.project)
-      if (!cachedPortfolio) {
-        cache.set(CACHE_KEYS.portfolio, portfolioRes.data, CACHE_TTL.portfolio)
-      }
+      if (!cachedPortfolio) cache.set(CACHE_KEYS.portfolio, portfolioRes.data, CACHE_TTL.portfolio)
       setProject(projectRes.data)
       setPortfolio(portfolioRes.data)
-    } catch (error) {
-      console.error('Failed to load project details:', error)
+    } catch {
       navigate('/')
     } finally {
       setLoading(false)
     }
-  }
-
-  const openImage = (img) => {
-    setModalImage(img)
-    setIsModalOpen(true)
-  }
-
-  const closeImage = () => {
-    setIsModalOpen(false)
-    setModalImage(null)
   }
 
   const items = useMemo(() => {
@@ -253,7 +248,6 @@ export default function ProjectDetailsViewer() {
         .forEach((it) => arr.push({ src: normalizeMediaUrl(it.video), caption: it.caption || '', type: 'video' }))
     }
 
-    // Deduplicate images by src; videos are always unique
     const seen = new Set()
     return arr.filter((it) => {
       if (it.type === 'video') return true
@@ -263,32 +257,51 @@ export default function ProjectDetailsViewer() {
     })
   }, [project])
 
+  // Only images participate in the lightbox
+  const imageItems = useMemo(() => items.filter((it) => it.type === 'image'), [items])
+
+  const openLightbox = useCallback((src) => {
+    const idx = imageItems.findIndex((it) => it.src === src)
+    if (idx !== -1) setLightboxIdx(idx)
+  }, [imageItems])
+
+  const closeLightbox = useCallback(() => setLightboxIdx(null), [])
+  const prevImage = useCallback(() => setLightboxIdx((i) => Math.max(0, i - 1)), [])
+  const nextImage = useCallback(() => setLightboxIdx((i) => Math.min(imageItems.length - 1, i + 1)), [imageItems.length])
+
   if (loading) {
     return <div className="loading-screen" style={{ backgroundColor: colors.background, color: colors.text }}>Loading Project...</div>
   }
 
   if (!project) return null
 
+  const totalMedia = items.length
+  const imgCount = imageItems.length
+  const vidCount = items.filter((it) => it.type === 'video').length
+
   return (
-    <div className="project-details-page" style={{
-      backgroundColor: colors.background,
-      color: colors.text,
-      minHeight: '100vh',
-      transition: 'background-color 0.3s ease, color 0.3s ease'
-    }}>
+    <div className="project-details-page" style={{ backgroundColor: colors.background, color: colors.text }}>
       <SeasonalDecorations />
       <SeasonalBackground showParticles={true} themeColors={colors} />
-      
-      <ImageModal open={isModalOpen} image={modalImage} onClose={closeImage} />
 
-      {/* Navigation Bar Substitute */}
+      <Lightbox
+        items={imageItems}
+        idx={lightboxIdx}
+        onClose={closeLightbox}
+        onPrev={prevImage}
+        onNext={nextImage}
+      />
+
+      {/* Nav */}
       <nav className="project-details-nav" style={{ backgroundColor: `${colors.background}cc`, borderBottom: `1px solid ${colors.secondary}` }}>
         <button className="back-btn" onClick={() => navigate('/')} style={{ color: colors.primary }}>
-           ← Back to Portfolio
+          ← Back to Portfolio
         </button>
       </nav>
 
       <main className="project-details-main container">
+
+        {/* Hero header */}
         <header className="project-details-hero">
           <h1 style={{ color: colors.primary }}>{project.title}</h1>
           <div className="project-details-links">
@@ -305,46 +318,89 @@ export default function ProjectDetailsViewer() {
           </div>
         </header>
 
+        {/* Description */}
         {project.description && (
           <section className="project-details-description" style={{ backgroundColor: colors.secondary, borderColor: colors.accent }}>
             <Prose style={{ color: colors.text }}>{project.description}</Prose>
           </section>
         )}
 
-        {items.length > 0 && project.project_type === 'local' && (
+        {/* Gallery */}
+        {totalMedia > 0 && project.project_type === 'local' && (
           <section className="project-details-gallery">
-            <h2 style={{ color: colors.primary }}>Project Gallery</h2>
-            <div className="gallery-grid">
-              {items.map((it, idx) => (
-                <div key={idx} className="gallery-item-wrap">
-                  {it.type === 'video' ? (
-                    <div className="gallery-item gallery-item--video" style={{ borderColor: colors.accent }}>
-                      <video
-                        src={it.src}
-                        controls
-                        preload="metadata"
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000', display: 'block' }}
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="gallery-item"
-                      style={{ borderColor: colors.accent, cursor: 'zoom-in' }}
-                      onClick={() => openImage({ src: it.src, caption: it.caption || '', alt: project.title })}
-                    >
-                      <img src={it.src} alt={`${project.title} gallery item`} />
-                      <div className="gallery-item-overlay">
-                        <span className="expand-icon">⤢</span>
-                      </div>
-                    </div>
-                  )}
-                  {it.caption && (
-                    <div className="gallery-item-caption" style={{ color: colors.text }}>
-                      {it.caption}
-                    </div>
-                  )}
+            <div className="gallery-header">
+              <h2 style={{ color: colors.primary }}>Project Gallery</h2>
+              {totalMedia > 0 && (
+                <div className="gallery-meta">
+                  {imgCount > 0 && <span className="gallery-chip">{imgCount} photo{imgCount !== 1 ? 's' : ''}</span>}
+                  {vidCount > 0 && <span className="gallery-chip">{vidCount} video{vidCount !== 1 ? 's' : ''}</span>}
                 </div>
-              ))}
+              )}
+            </div>
+
+            <div className="gallery-bento">
+              {items.map((it, idx) => {
+                const isHero = idx === 0 && totalMedia > 1
+                const cellClass = [
+                  'gallery-cell',
+                  isHero ? 'gallery-cell--hero' : '',
+                  it.type === 'video' ? 'gallery-cell--video' : 'gallery-cell--image',
+                ].filter(Boolean).join(' ')
+
+                return (
+                  <div key={idx} className={cellClass}>
+                    {it.type === 'video' ? (
+                      <>
+                        <video
+                          src={it.src}
+                          controls
+                          preload="metadata"
+                          className="gallery-cell-video"
+                        />
+                        {it.caption && (
+                          <div className="gallery-cell-caption gallery-cell-caption--video" style={{ color: colors.text }}>
+                            {it.caption}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div
+                        className="gallery-cell-inner"
+                        onClick={() => openLightbox(it.src)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === 'Enter' && openLightbox(it.src)}
+                        aria-label={`View image${it.caption ? `: ${it.caption}` : ''}`}
+                      >
+                        <img
+                          src={it.src}
+                          alt={`${project.title} — ${idx + 1}`}
+                          className="gallery-cell-img"
+                          loading={idx < 4 ? 'eager' : 'lazy'}
+                        />
+                        <div className="gallery-cell-overlay">
+                          <div className="gallery-cell-overlay-bg" />
+                          <div className="gallery-cell-overlay-content">
+                            {it.caption && <p className="gallery-cell-caption-text">{it.caption}</p>}
+                            <div className="gallery-cell-zoom-icon" style={{ borderColor: 'rgba(255,255,255,0.6)' }}>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                          {isHero && (
+                            <div className="gallery-cell-hero-badge" style={{ backgroundColor: colors.accent, color: getReadableTextColor(colors.accent) }}>
+                              Featured
+                            </div>
+                          )}
+                        </div>
+                        {/* Always-visible index dot */}
+                        <div className="gallery-cell-index">{idx + 1}</div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </section>
         )}
