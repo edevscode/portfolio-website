@@ -140,43 +140,44 @@ def _video_storage():
 
             class _ChunkedVideoStorage(VideoMediaCloudinaryStorage):
                 def _save(self, name, content):
-                    import logging as _logging
-                    _log = _logging.getLogger('api.models')
-                    _log.warning('[cloudinary] _save: name=%s size=%s', name, getattr(content, 'size', '?'))
+                    # Skip cloudinary_storage's 100 MB size check and build the
+                    # stored name ourselves so url() can reconstruct the right URL.
                     response = self._upload(name, content)
-                    _log.warning('[cloudinary] _upload response: public_id=%s secure_url=%s',
-                                 response.get('public_id') if response else None,
-                                 response.get('secure_url') if response else None)
                     if not response or 'public_id' not in response:
                         raise ValueError('Cloudinary upload_large returned no public_id')
-                    return response['public_id']
+                    # Store public_id + format so url() can append the extension.
+                    fmt = response.get('format', '')
+                    public_id = response['public_id']
+                    return f"{public_id}.{fmt}" if fmt else public_id
 
                 def _upload(self, name, content):
                     import os
-                    import logging as _logging
-                    _log = _logging.getLogger('api.models')
                     file_arg = (
                         content.temporary_file_path()
                         if hasattr(content, 'temporary_file_path')
                         else content
                     )
+                    # Strip extension — Cloudinary public_ids don't include it.
                     public_id = os.path.splitext(name)[0]
-                    _log.warning('[cloudinary] upload_large START: public_id=%s type=%s',
-                                 public_id, type(file_arg).__name__)
-                    try:
-                        result = cloudinary.uploader.upload_large(
-                            file_arg,
-                            resource_type='video',
-                            public_id=public_id,
-                            overwrite=True,
-                            chunk_size=20 * 1024 * 1024,
-                        )
-                        _log.warning('[cloudinary] upload_large DONE: url=%s',
-                                     result.get('secure_url') if result else None)
-                        return result
-                    except Exception as exc:
-                        _log.warning('[cloudinary] upload_large EXCEPTION: %s', exc)
-                        raise
+                    return cloudinary.uploader.upload_large(
+                        file_arg,
+                        resource_type='video',
+                        public_id=public_id,
+                        overwrite=True,
+                        chunk_size=20 * 1024 * 1024,
+                    )
+
+                def url(self, name):
+                    # Base class url() prepends 'media/' but we upload directly
+                    # under 'project_videos/'. Build the URL from the stored name
+                    # which may include a format extension (e.g. 'filename.mp4').
+                    # Fall back to 'mp4' for any legacy records without extension.
+                    import os
+                    root, ext = os.path.splitext(name)
+                    fmt = ext.lstrip('.') if ext else 'mp4'
+                    return cloudinary.CloudinaryResource(
+                        root, resource_type='video', format=fmt
+                    ).url
 
             return _ChunkedVideoStorage()
         except ImportError:
