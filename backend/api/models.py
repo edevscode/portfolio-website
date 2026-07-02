@@ -140,17 +140,30 @@ def _video_storage():
 
             class _ChunkedVideoStorage(VideoMediaCloudinaryStorage):
                 def _save(self, name, content):
-                    # Skip cloudinary_storage's hard-coded 100 MB size check;
-                    # our _upload uses upload_large() which handles any size.
+                    # Skip cloudinary_storage's hard-coded 100 MB size check.
                     response = self._upload(name, content)
+                    if not response or 'public_id' not in response:
+                        raise ValueError('Cloudinary upload_large returned no public_id — upload may have failed.')
                     return response['public_id']
 
                 def _upload(self, name, content):
+                    import os
+                    # For large files Django uses TemporaryUploadedFile (on-disk).
+                    # upload_large is most reliable with a file path; fall back to
+                    # the file object for in-memory uploads.
+                    file_arg = (
+                        content.temporary_file_path()
+                        if hasattr(content, 'temporary_file_path')
+                        else content
+                    )
+                    # Preserve the upload_to folder in the public_id so the URL
+                    # matches what cloudinary_storage expects (path minus extension).
+                    public_id = os.path.splitext(name)[0]
                     return cloudinary.uploader.upload_large(
-                        content,
+                        file_arg,
                         resource_type='video',
-                        use_filename=True,
-                        unique_filename=True,
+                        public_id=public_id,
+                        overwrite=True,
                         chunk_size=20 * 1024 * 1024,  # 20 MB per chunk
                     )
 
