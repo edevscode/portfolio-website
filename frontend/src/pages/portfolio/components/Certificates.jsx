@@ -178,8 +178,6 @@ function CertCard({ cert, primary, accent, text }) {
           )}
 
           <div className="cert-meta">
-            {isExpired && <span className="cert-tag cert-tag--expired">Expired</span>}
-            {!cert.expiry_date && <span className="cert-tag cert-tag--lifetime">No Expiry</span>}
             {files.length > 0 && (
               <span className="cert-tag cert-tag--files">{files.length} file{files.length !== 1 ? 's' : ''}</span>
             )}
@@ -193,7 +191,6 @@ function CertCard({ cert, primary, accent, text }) {
           {cert.description && <p className="cert-desc" style={{ color: text }}>{cert.description}</p>}
           <div className="cert-dates" style={{ color: text }}>
             <span>Issued {formatDate(cert.issue_date)}</span>
-            {cert.expiry_date && <span> · Expires {formatDate(cert.expiry_date)}</span>}
           </div>
           {cert.credential_id && <p className="cert-id" style={{ color: text }}>ID: {cert.credential_id}</p>}
         </div>
