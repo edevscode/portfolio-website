@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Mail, MailOpen, Trash2, X, MessageSquare } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Mail, MailOpen, Trash2, MessageSquare, Plus, Link } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import SocialLinksManager from './SocialLinksManager'
 import './Manager.css'
@@ -44,6 +44,7 @@ export default function ContactsManager() {
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const [viewing, setViewing] = useState(null)
+  const socialRef = useRef(null)
 
   useEffect(() => { loadContacts() }, [])
 
@@ -103,11 +104,16 @@ export default function ContactsManager() {
             </button>
           </div>
         </div>
+        {activeTab === 'social' && (
+          <button className="btn-primary" onClick={() => socialRef.current?.openAdd()}>
+            <Plus size={18} /> Add Link
+          </button>
+        )}
       </div>
 
       <div className="manager-section">
         {activeTab === 'social' ? (
-          <SocialLinksManager />
+          <SocialLinksManager ref={socialRef} embedded />
         ) : loading ? (
           <div className="loading">Loading…</div>
         ) : contacts.length === 0 ? (
