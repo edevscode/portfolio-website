@@ -109,6 +109,15 @@
   border: 1px solid #e2e8f0;
 }
 
+.cert-badge--clickable {
+  cursor: zoom-in;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.cert-badge--clickable:hover {
+  transform: scale(1.07);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+
 .cert-badge-placeholder {
   width: 72px;
   height: 72px;
@@ -157,6 +166,11 @@
 .cert-tag--lifetime {
   background: #d1fae5;
   color: #065f46;
+}
+
+.cert-tag--files {
+  background: #e0e7ff;
+  color: #4338ca;
 }
 
 /* Body */
@@ -235,8 +249,106 @@
   color: #fff;
 }
 
+/* Image strip (multiple images) */
+.cert-img-strip {
+  display: flex;
+  gap: 8px;
+  padding: 0 24px 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.cert-strip-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+  cursor: zoom-in;
+  border: 1.5px solid #e2e8f0;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.cert-strip-thumb:hover {
+  transform: scale(1.1);
+  border-color: var(--primary);
+}
+
+/* Lightbox */
+.cert-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cert-lb-img {
+  max-width: min(90vw, 900px);
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+  user-select: none;
+}
+
+.cert-lb-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease;
+}
+.cert-lb-close:hover { background: rgba(255,255,255,0.28); }
+
+.cert-lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.12);
+  border: none;
+  color: #fff;
+  font-size: 36px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease;
+  line-height: 1;
+}
+.cert-lb-nav:hover { background: rgba(255,255,255,0.26); }
+.cert-lb-prev { left: 20px; }
+.cert-lb-next { right: 20px; }
+
+.cert-lb-counter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 999px;
+}
+
 @media (max-width: 600px) {
   .certs-grid {
     grid-template-columns: 1fr;
   }
+  .cert-lb-nav { display: none; }
 }

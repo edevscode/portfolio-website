@@ -80,6 +80,7 @@ export const apiService = {
   createCertificate: (data) => api.post('/certificates/', data),
   updateCertificate: (id, data) => api.patch(`/certificates/${id}/`, data),
   deleteCertificate: (id) => api.delete(`/certificates/${id}/`),
+  deleteCertificateFile: (id) => api.delete(`/certificate-files/${id}/`),
 
   // Skills
   getSkills: () => api.get('/skills/'),

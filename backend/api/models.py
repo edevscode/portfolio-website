@@ -209,7 +209,6 @@ class Certificate(models.Model):
     expiry_date = models.DateField(blank=True, null=True)
     credential_id = models.CharField(max_length=200, blank=True, default='')
     credential_url = models.URLField(blank=True, null=True)
-    image = models.FileField(upload_to='certificates/', blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -220,6 +219,20 @@ class Certificate(models.Model):
 
     def __str__(self):
         return f"{self.title} — {self.issuer}"
+
+
+class CertificateFile(models.Model):
+    certificate = models.ForeignKey(Certificate, related_name='files', on_delete=models.CASCADE)
+    file = models.FileField(upload_to='certificates/')
+    caption = models.CharField(max_length=200, blank=True, default='')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'certificate_files'
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f"{self.certificate.title} file #{self.order}"
 
 
 class Skill(models.Model):

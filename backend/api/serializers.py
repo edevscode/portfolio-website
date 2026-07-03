@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Theme, Project, ProjectImage, ProjectVideo, Certificate, Skill, Experience, About, SocialLink, Contact
+from .models import Theme, Project, ProjectImage, ProjectVideo, Certificate, CertificateFile, Skill, Experience, About, SocialLink, Contact
 
 
 class ThemeSerializer(serializers.ModelSerializer):
@@ -59,13 +59,21 @@ class ProjectSerializer(serializers.ModelSerializer):
         }
 
 
+class CertificateFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CertificateFile
+        fields = ['id', 'file', 'caption', 'order']
+
+
 class CertificateSerializer(serializers.ModelSerializer):
+    files = CertificateFileSerializer(many=True, read_only=True)
+
     class Meta:
         model = Certificate
         fields = [
             'id', 'title', 'issuer', 'description',
             'issue_date', 'expiry_date', 'credential_id', 'credential_url',
-            'image', 'order', 'is_featured', 'created_at',
+            'files', 'order', 'is_featured', 'created_at',
         ]
 
 
