@@ -469,3 +469,99 @@
 }
 .skill-act--edit:hover { background: #e0e7ff; color: #4f46e5; }
 .skill-act--del:hover  { background: #fee2e2; color: #dc2626; }
+
+/* ── Inbox ── */
+.inbox-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.inbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.13s ease;
+  position: relative;
+}
+.inbox-row:last-child { border-bottom: none; }
+.inbox-row:hover { background: #f8fafc; }
+.inbox-row:hover .inbox-delete { opacity: 1; }
+
+.inbox-row--unread { background: #f5f3ff; }
+.inbox-row--unread:hover { background: #ede9fe; }
+.inbox-row--unread .inbox-name { color: #4f46e5; font-weight: 800; }
+.inbox-row--unread .inbox-subject { color: #0f172a; font-weight: 700; }
+
+.inbox-icon {
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.inbox-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.inbox-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inbox-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-date {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.inbox-subject {
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-preview {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-delete {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: background 0.12s, color 0.12s, opacity 0.12s;
+  margin-top: 2px;
+}
+.inbox-delete:hover { background: #fee2e2; color: #dc2626; }

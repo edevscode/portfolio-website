@@ -112,6 +112,7 @@ export const apiService = {
   getContact: (id) => api.get(`/contacts/${id}/`),
   createContact: (data) => api.post('/contacts/', data),
   markContactAsRead: (id) => api.post(`/contacts/${id}/mark_as_read/`),
+  deleteContact: (id) => api.delete(`/contacts/${id}/`),
 
   // Portfolio
   getPortfolio: () => api.get('/portfolio/all/'),
