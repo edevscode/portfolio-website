@@ -28,6 +28,32 @@ function certFileType(url) {
   return 'image'
 }
 
+/* ─── DocViewer ─────────────────────────────────────────────────────────── */
+function DocViewer({ file, type, caption, onClose }) {
+  const src = type === 'pdf'
+    ? `https://docs.google.com/viewer?url=${encodeURIComponent(file)}&embedded=true`
+    : `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(file)}`
+
+  return (
+    <div className="cert-lightbox" onClick={onClose}>
+      <button className="cert-lb-close" onClick={onClose} aria-label="Close">✕</button>
+      <div className="cert-doc-frame" onClick={e => e.stopPropagation()}>
+        <div className="cert-doc-toolbar">
+          <span className="cert-doc-label">{type === 'pdf' ? 'PDF' : 'DOC'}{caption ? ` — ${caption}` : ''}</span>
+          <a href={file} target="_blank" rel="noopener noreferrer" className="cert-doc-open-tab">
+            Open in new tab ↗
+          </a>
+        </div>
+        <iframe
+          src={src}
+          title={caption || 'Document viewer'}
+          className="cert-doc-iframe"
+        />
+      </div>
+    </div>
+  )
+}
+
 /* ─── Lightbox ─────────────────────────────────────────────────────────── */
 function Lightbox({ images, startIndex, onClose }) {
   const [idx, setIdx] = useState(startIndex)
@@ -69,6 +95,7 @@ function Lightbox({ images, startIndex, onClose }) {
 /* ─── Card ──────────────────────────────────────────────────────────────── */
 function CertCard({ cert, primary, accent, text }) {
   const [lightboxStart, setLightboxStart] = useState(null)
+  const [viewingDoc, setViewingDoc] = useState(null)
   const [failedUrls, setFailedUrls] = useState(new Set())
 
   const isExpired = cert.expiry_date && new Date(cert.expiry_date) < new Date()
@@ -87,6 +114,9 @@ function CertCard({ cert, primary, accent, text }) {
     <>
       {lightboxStart !== null && (
         <Lightbox images={imageFiles} startIndex={lightboxStart} onClose={() => setLightboxStart(null)} />
+      )}
+      {viewingDoc && (
+        <DocViewer {...viewingDoc} onClose={() => setViewingDoc(null)} />
       )}
 
       <div className={`cert-card${cert.is_featured ? ' cert-card--featured' : ''}`} style={{ '--primary': primary, '--accent': accent }}>
@@ -155,24 +185,21 @@ function CertCard({ cert, primary, accent, text }) {
         {(docFiles.length > 0 || cert.credential_url) && (
           <div className="cert-card-footer">
             {docFiles.map(f => {
-              const type = certFileType(f.file)
+              const type = getType(f)
               return (
-                <a
+                <button
                   key={f.id}
-                  href={f.file}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="cert-verify-btn"
+                  type="button"
+                  onClick={() => setViewingDoc({ file: f.file, type, caption: f.caption })}
+                  className="cert-verify-btn cert-verify-btn--btn"
                   style={{ '--btn-color': type === 'word' ? '#2563eb' : '#dc2626' }}
                 >
-                  {type === 'pdf' ? 'View PDF' : 'Download DOC'}
+                  {type === 'pdf' ? 'View PDF' : 'View DOC'}
                   {f.caption && <span style={{ fontWeight: 400, opacity: 0.75 }}> — {f.caption}</span>}
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
+                    <path d="M15 3h6v6M10 14L21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                   </svg>
-                </a>
+                </button>
               )
             })}
             {cert.credential_url && (
