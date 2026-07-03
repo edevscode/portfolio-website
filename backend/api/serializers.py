@@ -60,6 +60,24 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class CertificateFileSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField()
+
+    def get_file(self, obj):
+        if not obj.file:
+            return None
+        try:
+            url = obj.file.url
+        except Exception:
+            return None
+        if not url:
+            return None
+        if url.startswith(('http://', 'https://')):
+            return url
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
     class Meta:
         model = CertificateFile
         fields = ['id', 'file', 'caption', 'order']

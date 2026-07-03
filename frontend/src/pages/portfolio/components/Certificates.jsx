@@ -69,12 +69,17 @@ function Lightbox({ images, startIndex, onClose }) {
 /* ─── Card ──────────────────────────────────────────────────────────────── */
 function CertCard({ cert, primary, accent, text }) {
   const [lightboxStart, setLightboxStart] = useState(null)
+  const [failedUrls, setFailedUrls] = useState(new Set())
 
   const isExpired = cert.expiry_date && new Date(cert.expiry_date) < new Date()
-  const files = (cert.files || []).map(f => ({ ...f, file: normalizeUrl(f.file) }))
-  const imageFiles = files.filter(f => certFileType(f.file) === 'image')
+  const files = (cert.files || [])
+    .map(f => ({ ...f, file: normalizeUrl(f.file) }))
+    .filter(f => f.file)  // skip null/empty file URLs
+  const imageFiles = files.filter(f => certFileType(f.file) === 'image' && !failedUrls.has(f.file))
   const docFiles   = files.filter(f => certFileType(f.file) !== 'image')
   const firstImage = imageFiles[0]
+
+  const onImgError = (url) => setFailedUrls(prev => new Set([...prev, url]))
 
   return (
     <>
@@ -95,6 +100,7 @@ function CertCard({ cert, primary, accent, text }) {
               className="cert-badge cert-badge--clickable"
               onClick={() => setLightboxStart(0)}
               title="Click to view"
+              onError={() => onImgError(firstImage.file)}
             />
           ) : (
             <div className="cert-badge-placeholder" style={{ background: `linear-gradient(135deg, ${primary}22, ${accent}22)`, border: `2px solid ${primary}33` }}>
@@ -137,6 +143,7 @@ function CertCard({ cert, primary, accent, text }) {
                 className="cert-strip-thumb"
                 onClick={() => setLightboxStart(i)}
                 title={img.caption || `View image ${i + 1}`}
+                onError={() => onImgError(img.file)}
               />
             ))}
           </div>
