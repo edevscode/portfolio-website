@@ -181,9 +181,25 @@ function CertCard({ cert, primary, accent, text }) {
           </div>
         )}
 
-        {/* Footer: doc downloads + verify link */}
-        {(docFiles.length > 0 || cert.credential_url) && (
+        {/* Footer: view buttons for all file types + verify link */}
+        {(imageFiles.length > 0 || docFiles.length > 0 || cert.credential_url) && (
           <div className="cert-card-footer">
+            {imageFiles.map((f, i) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setLightboxStart(i)}
+                className="cert-verify-btn cert-verify-btn--btn"
+                style={{ '--btn-color': 'var(--primary)' }}
+              >
+                View Image
+                {f.caption && <span style={{ fontWeight: 400, opacity: 0.75 }}> — {f.caption}</span>}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            ))}
             {docFiles.map(f => {
               const type = getType(f)
               return (
