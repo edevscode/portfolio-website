@@ -222,8 +222,11 @@ class Certificate(models.Model):
 
 
 class CertificateFile(models.Model):
+    FILE_TYPE_CHOICES = [('image', 'Image'), ('pdf', 'PDF'), ('word', 'Word')]
+
     certificate = models.ForeignKey(Certificate, related_name='files', on_delete=models.CASCADE)
     file = models.FileField(upload_to='certificates/')
+    file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES, default='image')
     caption = models.CharField(max_length=200, blank=True, default='')
     order = models.PositiveIntegerField(default=0)
 

@@ -75,8 +75,10 @@ function CertCard({ cert, primary, accent, text }) {
   const files = (cert.files || [])
     .map(f => ({ ...f, file: normalizeUrl(f.file) }))
     .filter(f => f.file)  // skip null/empty file URLs
-  const imageFiles = files.filter(f => certFileType(f.file) === 'image' && !failedUrls.has(f.file))
-  const docFiles   = files.filter(f => certFileType(f.file) !== 'image')
+  // Use server-side file_type when available (Cloudinary strips extensions from URLs)
+  const getType = (f) => f.file_type || certFileType(f.file)
+  const imageFiles = files.filter(f => getType(f) === 'image' && !failedUrls.has(f.file))
+  const docFiles   = files.filter(f => getType(f) !== 'image')
   const firstImage = imageFiles[0]
 
   const onImgError = (url) => setFailedUrls(prev => new Set([...prev, url]))

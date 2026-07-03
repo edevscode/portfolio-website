@@ -199,7 +199,7 @@ export default function CertificatesManager() {
             <Award size={18} color="#94a3b8" />
           </div>
         )
-        const type = fileType(first.file)
+        const type = first.file_type || fileType(first.file)
         if (type === 'image') return (
           <img src={normalizeUrl(first.file)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
         )

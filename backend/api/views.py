@@ -267,6 +267,15 @@ class CertificateViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
+    @staticmethod
+    def _detect_file_type(filename):
+        name = (filename or '').lower()
+        if name.endswith('.pdf'):
+            return 'pdf'
+        if name.endswith('.doc') or name.endswith('.docx'):
+            return 'word'
+        return 'image'
+
     def _save_files(self, certificate, request, replace=False):
         all_file_keys = list(request.FILES.keys()) if hasattr(request, 'FILES') else []
         files = request.FILES.getlist('files') if hasattr(request, 'FILES') else []
@@ -283,11 +292,14 @@ class CertificateViewSet(viewsets.ModelViewSet):
         start = CertificateFile.objects.filter(certificate=certificate).count()
         for idx, f in enumerate(files):
             caption = captions[idx] if idx < len(captions) else ''
+            file_type = self._detect_file_type(f.name)
             try:
                 obj = CertificateFile.objects.create(
-                    certificate=certificate, file=f, caption=caption, order=start + idx
+                    certificate=certificate, file=f, caption=caption,
+                    file_type=file_type, order=start + idx
                 )
-                logger.info('[cert] saved file #%s: id=%s name=%s url=%s', idx, obj.id, f.name, obj.file.name)
+                logger.info('[cert] saved file #%s: id=%s name=%s type=%s stored=%s',
+                            idx, obj.id, f.name, file_type, obj.file.name)
             except Exception as exc:
                 logger.error('[cert] failed to save file #%s name=%s: %s\n%s',
                              idx, f.name, exc, traceback.format_exc())

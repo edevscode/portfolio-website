@@ -80,7 +80,7 @@ class CertificateFileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CertificateFile
-        fields = ['id', 'file', 'caption', 'order']
+        fields = ['id', 'file', 'file_type', 'caption', 'order']
 
 
 class CertificateSerializer(serializers.ModelSerializer):
