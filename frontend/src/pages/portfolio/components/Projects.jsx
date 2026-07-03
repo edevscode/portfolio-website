@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
@@ -9,14 +9,14 @@ import './Projects.css'
 function stripMarkdown(text) {
   if (!text) return ''
   return text
-    .replace(/#{1,6}\s/g, '')       // headings
-    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
-    .replace(/\*(.+?)\*/g, '$1')     // italic
-    .replace(/`(.+?)`/g, '$1')       // inline code
-    .replace(/^[-*+]\s/gm, '')       // bullet points
-    .replace(/^\d+\.\s/gm, '')       // numbered lists
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // links
-    .replace(/\n+/g, ' ')            // collapse newlines to space
+    .replace(/#{1,6}\s/g, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/^[-*+]\s/gm, '')
+    .replace(/^\d+\.\s/gm, '')
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+    .replace(/\n+/g, ' ')
     .trim()
 }
 
@@ -25,131 +25,151 @@ function normalizeMediaUrl(url) {
   if (typeof url !== 'string') return ''
   if (/^https?:\/\//i.test(url)) return url
   const origin = (() => {
-    try {
-      return new URL(API_BASE_URL).origin
-    } catch {
-      return ''
-    }
+    try { return new URL(API_BASE_URL).origin } catch { return '' }
   })()
   return `${origin}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value))
-}
+// ── Project card ──────────────────────────────────────────────────────────────
 
-function ImageModal({ open, image, onClose }) {
-  const [zoom, setZoom] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
-  const [dragging, setDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [dragStartOffset, setDragStartOffset] = useState({ x: 0, y: 0 })
+function ProjectCard({ project, colors, onNavigate }) {
+  const [hovered, setHovered] = useState(false)
+  const isLocal = project.project_type === 'local'
+  const desc = stripMarkdown(project.description)
+  const thumbnailUrl = normalizeMediaUrl(project.thumbnail)
 
-  useEffect(() => {
-    if (!open) return
-    setZoom(1)
-    setOffset({ x: 0, y: 0 })
-  }, [open, image?.src])
-
-  useEffect(() => {
-    if (!open) return
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') onClose?.()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, onClose])
-
-  useEffect(() => {
-    if (!open) return
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [open])
-
-  if (!open || !image?.src) return null
-
-  const handleWheel = (e) => {
-    e.preventDefault()
-    const delta = e.deltaY
-    const next = clamp(zoom + (delta > 0 ? -0.12 : 0.12), 1, 4)
-    if (next === 1) {
-      setOffset({ x: 0, y: 0 })
-    }
-    setZoom(next)
-  }
-
-  const handlePointerDown = (e) => {
-    if (zoom <= 1) return
-    setDragging(true)
-    setDragStart({ x: e.clientX, y: e.clientY })
-    setDragStartOffset(offset)
-  }
-
-  const handlePointerMove = (e) => {
-    if (!dragging) return
-    const dx = e.clientX - dragStart.x
-    const dy = e.clientY - dragStart.y
-    setOffset({ x: dragStartOffset.x + dx, y: dragStartOffset.y + dy })
-  }
-
-  const stopDragging = () => {
-    setDragging(false)
-  }
-
-  const handleStageClick = (e) => {
-    // If we dragged, don't trigger a click
-    if (Math.abs(e.clientX - dragStart.x) > 5 || Math.abs(e.clientY - dragStart.y) > 5) {
-      return
-    }
-    
-    // Toggle zoom
-    if (zoom > 1) {
-      setZoom(1)
-      setOffset({ x: 0, y: 0 })
-    } else {
-      setZoom(2.5)
-    }
-  }
+  const accentRgb = hexToRgbParts(colors.accent)
+  const hoverShadow = hovered
+    ? `0 28px 56px -12px rgba(${accentRgb}, 0.30), 0 8px 20px -8px rgba(0,0,0,0.18)`
+    : '0 2px 12px rgba(0,0,0,0.07)'
 
   return (
-    <div className="project-image-modal" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="project-image-modal__content" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="project-image-modal__close" onClick={onClose} aria-label="Close image">
-          ×
-        </button>
-
-        <div className="project-image-modal__hud" aria-hidden="true">
-          <div className="project-image-modal__zoom">{Math.round(zoom * 100)}%</div>
-          <div className="project-image-modal__hint">Click or scroll to zoom • Drag to pan</div>
-        </div>
-
-        <div
-          className={dragging ? 'project-image-modal__stage is-dragging' : 'project-image-modal__stage'}
-          style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
-          onWheel={handleWheel}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={stopDragging}
-          onPointerCancel={stopDragging}
-          onPointerLeave={stopDragging}
-          onClick={handleStageClick}
-        >
+    <article
+      className="pcard"
+      style={{ backgroundColor: colors.secondary, boxShadow: hoverShadow }}
+      onClick={() => onNavigate(`/project/${project.slug || project.id}`)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onNavigate(`/project/${project.slug || project.id}`)}
+      aria-label={`View ${project.title}`}
+    >
+      {/* ── Image zone ── */}
+      <div className="pcard-media">
+        {thumbnailUrl ? (
           <img
-            src={image.src}
-            alt={image.alt || 'Project image'}
-            style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}
-            className="project-image-modal__img"
+            src={thumbnailUrl}
+            alt={project.title}
+            className="pcard-img"
+            loading="lazy"
           />
+        ) : (
+          <div
+            className="pcard-placeholder"
+            style={{ background: `linear-gradient(135deg, ${colors.accent}28 0%, ${colors.primary}18 100%)` }}
+          >
+            <span className="pcard-placeholder-initial" style={{ color: colors.accent }}>
+              {project.title.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
+
+        {/* Always-visible bottom gradient + title */}
+        <div className="pcard-img-footer">
+          <h3 className="pcard-title" style={{ color: '#fff' }}>{project.title}</h3>
         </div>
 
-        {image.caption ? <div className="project-image-modal__caption">{image.caption}</div> : null}
+        {/* Type badge */}
+        <div className={`pcard-badge ${isLocal ? 'pcard-badge--gallery' : 'pcard-badge--live'}`}>
+          {isLocal ? 'Gallery' : 'Live Site'}
+        </div>
+
+        {/* CTA — slides up on hover */}
+        <div className="pcard-cta-layer">
+          <span className="pcard-cta-pill">
+            {isLocal ? 'View Gallery' : 'View Details'}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </span>
+        </div>
       </div>
+
+      {/* ── Body ── */}
+      <div className="pcard-body">
+        {desc && (
+          <p className="pcard-desc" style={{ color: colors.text }}>{desc}</p>
+        )}
+
+        {(project.url || project.github_url) && (
+          <div className="pcard-links">
+            {project.url && (
+              <a
+                href={project.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pcard-link pcard-link--primary"
+                style={{ backgroundColor: colors.accent, color: getReadableTextColor(colors.accent) }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                Live Site
+              </a>
+            )}
+            {project.github_url && (
+              <a
+                href={project.github_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pcard-link pcard-link--github"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
+                </svg>
+                GitHub
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </article>
+  )
+}
+
+// ── Section divider ───────────────────────────────────────────────────────────
+
+function GroupLabel({ label, accent }) {
+  return (
+    <div className="project-group-label-row">
+      <div className="project-group-rule" style={{ backgroundColor: accent }} />
+      <span className="project-group-label-text" style={{ color: accent }}>{label}</span>
+      <div className="project-group-rule" style={{ backgroundColor: accent }} />
     </div>
   )
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function hexToRgbParts(hex) {
+  if (!hex) return '99,102,241'
+  const clean = hex.replace('#', '')
+  const full = clean.length === 3
+    ? clean.split('').map((c) => c + c).join('')
+    : clean
+  const r = parseInt(full.slice(0, 2), 16)
+  const g = parseInt(full.slice(2, 4), 16)
+  const b = parseInt(full.slice(4, 6), 16)
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return '99,102,241'
+  return `${r},${g},${b}`
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function Projects({ projects }) {
   const { config: seasonConfig } = useSeasonContext()
@@ -161,155 +181,68 @@ export default function Projects({ projects }) {
     background: theme.background_color || seasonConfig?.colors?.background || 'white',
     text: theme.text_color || seasonConfig?.colors?.text || 'black',
     secondary: theme.secondary_color || seasonConfig?.colors?.secondary || '#e8f4f8',
-    accent: theme.accent_color || seasonConfig?.colors?.accent || '#4da6ff'
+    accent: theme.accent_color || seasonConfig?.colors?.accent || '#4da6ff',
   } : {
     primary: seasonConfig?.colors?.primary || '#1a472a',
     background: seasonConfig?.colors?.background || 'white',
     text: seasonConfig?.colors?.text || 'black',
     secondary: seasonConfig?.colors?.secondary || '#e8f4f8',
-    accent: seasonConfig?.colors?.accent || '#4da6ff'
+    accent: seasonConfig?.colors?.accent || '#4da6ff',
   }
 
-  const [modalImage, setModalImage] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  if (!projects || projects.length === 0) return null
 
-  const openImage = (img) => {
-    setModalImage(img)
-    setIsModalOpen(true)
-  }
+  const liveProjects = projects.filter((p) => p.project_type === 'live' || !p.project_type)
+  const localProjects = projects.filter((p) => p.project_type === 'local')
 
-  const closeImage = () => {
-    setIsModalOpen(false)
-    setModalImage(null)
-  }
+  const showTwoGroups = liveProjects.length > 0 && localProjects.length > 0
 
   return (
-    <section className="projects" id="projects" style={{
-      backgroundColor: colors.background
-    }}>
-      <ImageModal open={isModalOpen} image={modalImage} onClose={closeImage} />
+    <section className="projects" id="projects" style={{ backgroundColor: colors.background }}>
       <div className="container">
-        <h2 className="projects-title" style={{ color: colors.primary }}>Featured Projects</h2>
 
-        {(() => {
-          const liveProjects = projects ? projects.filter(p => p.project_type === 'live' || p.project_type === undefined) : []
-          const localProjects = projects ? projects.filter(p => p.project_type === 'local') : []
+        {/* Section header */}
+        <div className="projects-section-header">
+          <h2 className="projects-title" style={{ color: colors.primary }}>Featured Projects</h2>
+          <p className="projects-subtitle" style={{ color: colors.text }}>
+            A selection of work I've built and shipped
+          </p>
+        </div>
 
-          return (
-            <>
-              {liveProjects.length > 0 && (
-                <div
-                  className="projects-grid"
-                  style={{ marginBottom: localProjects.length > 0 ? '80px' : '0' }}
-                >
-                  {liveProjects.map((project) => (
-                    <div 
-                      key={project.id} 
-                      className="local-project-summary-card" 
-                      onClick={() => navigate(`/project/${project.slug || project.id}`)}
-                      style={{
-                        borderColor: colors.accent,
-                        backgroundColor: colors.secondary,
-                      }}
-                    >
-                      <div className="summary-card-image" style={{ background: 'rgba(0,0,0,0.04)' }}>
-                        {project.thumbnail ? (
-                          <img 
-                            src={normalizeMediaUrl(project.thumbnail)} 
-                            alt={project.title} 
-                          />
-                        ) : (
-                          <div className="glass-placeholder" style={{ color: colors.text }}>
-                            No Image
-                          </div>
-                        )}
-                        <div className="summary-card-overlay">
-                          <span>View Details</span>
-                        </div>
-                      </div>
-                      <div className="summary-card-content">
-                        <h3 style={{ margin: '0 0 12px 0', color: colors.primary, wordBreak: 'break-word' }}>
-                          {project.title}
-                        </h3>
-                        
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                          {project.url && (
-                            <a 
-                              href={project.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="pill-btn"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ backgroundColor: colors.accent, color: getReadableTextColor(colors.accent), padding: '6px 16px', fontSize: '13px' }}
-                            >
-                              View
-                            </a>
-                          )}
-                          {project.github_url && (
-                            <a 
-                              href={project.github_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="pill-btn"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ backgroundColor: '#0056b3', color: 'white', padding: '6px 16px', fontSize: '13px' }}
-                            >
-                              GitHub
-                            </a>
-                          )}
-                        </div>
+        {/* Live projects */}
+        {liveProjects.length > 0 && (
+          <div className={`project-group ${showTwoGroups ? 'project-group--spaced' : ''}`}>
+            {showTwoGroups && <GroupLabel label="Web Applications" accent={colors.accent} />}
+            <div className="projects-grid">
+              {liveProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  colors={colors}
+                  onNavigate={navigate}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-                        {project.description && (
-                          <p className="summary-card-description" style={{ color: colors.text }}>
-                            {stripMarkdown(project.description)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {/* Local / gallery projects */}
+        {localProjects.length > 0 && (
+          <div className={`project-group ${showTwoGroups ? 'project-group--spaced' : ''}`}>
+            {showTwoGroups && <GroupLabel label="Project Gallery" accent={colors.accent} />}
+            <div className="projects-grid">
+              {localProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  colors={colors}
+                  onNavigate={navigate}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-              {localProjects.length > 0 && (
-                <div className="projects-grid">
-                  {localProjects.map((project) => (
-                    <div 
-                      key={project.id} 
-                      className="local-project-summary-card"
-                      onClick={() => navigate(`/project/${project.slug || project.id}`)}
-                      style={{
-                        borderColor: colors.accent,
-                        backgroundColor: colors.secondary,
-                      }}
-                    >
-                      <div className="summary-card-image" style={{ background: 'rgba(0,0,0,0.04)' }}>
-                        {project.thumbnail ? (
-                          <img 
-                            src={normalizeMediaUrl(project.thumbnail)} 
-                            alt={project.title} 
-                          />
-                        ) : (
-                          <div className="glass-placeholder">No Image</div>
-                        )}
-                        <div className="summary-card-overlay">
-                          <span>View Gallery</span>
-                        </div>
-                      </div>
-                      <div className="summary-card-content">
-                        <h3 style={{ color: colors.primary }}>{project.title}</h3>
-                        {project.description && (
-                          <p className="summary-card-description" style={{ color: colors.text }}>
-                            {stripMarkdown(project.description)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )
-        })()}
       </div>
     </section>
   )
