@@ -268,44 +268,60 @@ class CertificateViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def _save_files(self, certificate, request, replace=False):
+        all_file_keys = list(request.FILES.keys()) if hasattr(request, 'FILES') else []
         files = request.FILES.getlist('files') if hasattr(request, 'FILES') else []
+        logger.info('[cert] _save_files called: cert_id=%s replace=%s file_keys=%s files_count=%s',
+                    certificate.id, replace, all_file_keys, len(files))
         captions = (request.data.getlist('file_captions')
                     if hasattr(request, 'data') and hasattr(request.data, 'getlist')
                     else [])
         if not files:
+            logger.info('[cert] no files to save for cert_id=%s', certificate.id)
             return
         if replace:
             CertificateFile.objects.filter(certificate=certificate).delete()
         start = CertificateFile.objects.filter(certificate=certificate).count()
         for idx, f in enumerate(files):
             caption = captions[idx] if idx < len(captions) else ''
-            CertificateFile.objects.create(
-                certificate=certificate, file=f, caption=caption, order=start + idx
-            )
+            try:
+                obj = CertificateFile.objects.create(
+                    certificate=certificate, file=f, caption=caption, order=start + idx
+                )
+                logger.info('[cert] saved file #%s: id=%s name=%s url=%s', idx, obj.id, f.name, obj.file.name)
+            except Exception as exc:
+                logger.error('[cert] failed to save file #%s name=%s: %s\n%s',
+                             idx, f.name, exc, traceback.format_exc())
+                raise
 
     def create(self, request, *args, **kwargs):
+        logger.info('[cert] create called, FILES keys=%s', list(request.FILES.keys()) if hasattr(request, 'FILES') else [])
         try:
             response = super().create(request, *args, **kwargs)
         except Exception as exc:
+            logger.error('[cert] create super() failed: %s\n%s', exc, traceback.format_exc())
             return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         try:
             cert = Certificate.objects.get(pk=response.data.get('id'))
             self._save_files(cert, request)
             return Response(self.get_serializer(cert).data, status=response.status_code)
         except Exception as exc:
+            logger.error('[cert] create post-save failed: %s\n%s', exc, traceback.format_exc())
             return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update(self, request, *args, **kwargs):
+        logger.info('[cert] update called, FILES keys=%s', list(request.FILES.keys()) if hasattr(request, 'FILES') else [])
         replace = str(request.data.get('replace_files', '')).lower() in ('1', 'true', 'yes')
         try:
             response = super().update(request, *args, **kwargs)
         except Exception as exc:
+            logger.error('[cert] update super() failed: %s\n%s', exc, traceback.format_exc())
             return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         try:
             cert = self.get_object()
             self._save_files(cert, request, replace=replace)
             return Response(self.get_serializer(cert).data, status=response.status_code)
         except Exception as exc:
+            logger.error('[cert] update post-save failed: %s\n%s', exc, traceback.format_exc())
             return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def partial_update(self, request, *args, **kwargs):
