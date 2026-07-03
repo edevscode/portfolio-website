@@ -412,7 +412,7 @@ class PortfolioPublicView(viewsets.ViewSet):
         data = {
             'about': AboutSerializer(about).data if about else None,
             'projects': ProjectSerializer(projects, many=True).data,
-            'certificates': CertificateSerializer(certificates, many=True).data,
+            'certificates': CertificateSerializer(certificates, many=True, context={'request': request}).data,
             'skills': SkillSerializer(skills, many=True).data,
             'experiences': ExperienceSerializer(experiences, many=True).data,
             'social_links': SocialLinkSerializer(social_links, many=True).data,

@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '../../../context/ThemeContext'
 import { useSeasonContext } from '../../../context/useSeasonContext'
+import { API_BASE_URL } from '../../../services/apiService'
 import './Certificates.css'
+
+function normalizeUrl(url) {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  try {
+    return `${new URL(API_BASE_URL).origin}${url.startsWith('/') ? '' : '/'}${url}`
+  } catch {
+    return url
+  }
+}
 
 function formatDate(dateStr) {
   if (!dateStr) return null
@@ -60,7 +71,7 @@ function CertCard({ cert, primary, accent, text }) {
   const [lightboxStart, setLightboxStart] = useState(null)
 
   const isExpired = cert.expiry_date && new Date(cert.expiry_date) < new Date()
-  const files = cert.files || []
+  const files = (cert.files || []).map(f => ({ ...f, file: normalizeUrl(f.file) }))
   const imageFiles = files.filter(f => certFileType(f.file) === 'image')
   const docFiles   = files.filter(f => certFileType(f.file) !== 'image')
   const firstImage = imageFiles[0]
