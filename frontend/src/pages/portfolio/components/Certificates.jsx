@@ -57,8 +57,15 @@ function DocViewer({ file, type, caption, onClose }) {
 /* ─── Lightbox ─────────────────────────────────────────────────────────── */
 function Lightbox({ images, startIndex, onClose }) {
   const [idx, setIdx] = useState(startIndex)
-  const prev = useCallback(() => setIdx(i => (i - 1 + images.length) % images.length), [images.length])
-  const next = useCallback(() => setIdx(i => (i + 1) % images.length), [images.length])
+  const [fading, setFading] = useState(false)
+
+  const navigate = useCallback((next) => {
+    setFading(true)
+    setTimeout(() => { setIdx(next); setFading(false) }, 160)
+  }, [])
+
+  const prev = useCallback(() => navigate((idx - 1 + images.length) % images.length), [idx, images.length, navigate])
+  const next = useCallback(() => navigate((idx + 1) % images.length), [idx, images.length, navigate])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -70,24 +77,51 @@ function Lightbox({ images, startIndex, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [prev, next, onClose])
 
+  const current = images[idx]
+
   return (
     <div className="cert-lightbox" onClick={onClose}>
-      <button className="cert-lb-close" onClick={onClose} aria-label="Close">✕</button>
+      <button className="cert-lb-close" onClick={onClose} aria-label="Close">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
       {images.length > 1 && (
         <>
-          <button className="cert-lb-nav cert-lb-prev" onClick={e => { e.stopPropagation(); prev() }}>‹</button>
-          <button className="cert-lb-nav cert-lb-next" onClick={e => { e.stopPropagation(); next() }}>›</button>
+          <button className="cert-lb-nav cert-lb-prev" onClick={e => { e.stopPropagation(); prev() }} aria-label="Previous">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button className="cert-lb-nav cert-lb-next" onClick={e => { e.stopPropagation(); next() }} aria-label="Next">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </>
       )}
-      <img
-        src={images[idx].file}
-        alt={images[idx].caption || ''}
-        className="cert-lb-img"
-        onClick={e => e.stopPropagation()}
-      />
-      {images.length > 1 && (
-        <div className="cert-lb-counter">{idx + 1} / {images.length}</div>
-      )}
+
+      <div className="cert-lb-content" onClick={e => e.stopPropagation()}>
+        <img
+          key={idx}
+          src={current.file}
+          alt={current.caption || ''}
+          className={`cert-lb-img${fading ? ' cert-lb-img--out' : ''}`}
+        />
+        {current.caption && (
+          <p className="cert-lb-caption">{current.caption}</p>
+        )}
+        {images.length > 1 && (
+          <div className="cert-lb-dots">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`cert-lb-dot${i === idx ? ' cert-lb-dot--active' : ''}`}
+                onClick={() => navigate(i)}
+                aria-label={`Image ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
