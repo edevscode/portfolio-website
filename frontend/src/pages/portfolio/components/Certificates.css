@@ -402,6 +402,26 @@
 .cert-lb-prev { left: 20px; }
 .cert-lb-next { right: 20px; }
 
+.cert-lb-zoom-badge {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.85);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+  font-family: inherit;
+}
+.cert-lb-zoom-badge:hover { background: rgba(255,255,255,0.22); }
+
 /* Button reset for cert-verify-btn used as <button> */
 .cert-verify-btn--btn {
   background: none;

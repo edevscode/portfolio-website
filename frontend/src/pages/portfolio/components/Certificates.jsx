@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '../../../context/ThemeContext'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { API_BASE_URL } from '../../../services/apiService'
@@ -58,11 +58,19 @@ function DocViewer({ file, type, caption, onClose }) {
 function Lightbox({ images, startIndex, onClose }) {
   const [idx, setIdx] = useState(startIndex)
   const [fading, setFading] = useState(false)
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [dragging, setDragging] = useState(false)
+  const dragOrigin = useRef(null)
+  const lbRef = useRef(null)
+
+  const resetView = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }) }, [])
 
   const navigate = useCallback((next) => {
+    resetView()
     setFading(true)
     setTimeout(() => { setIdx(next); setFading(false) }, 160)
-  }, [])
+  }, [resetView])
 
   const prev = useCallback(() => navigate((idx - 1 + images.length) % images.length), [idx, images.length, navigate])
   const next = useCallback(() => navigate((idx + 1) % images.length), [idx, images.length, navigate])
@@ -72,20 +80,79 @@ function Lightbox({ images, startIndex, onClose }) {
       if (e.key === 'ArrowLeft') prev()
       else if (e.key === 'ArrowRight') next()
       else if (e.key === 'Escape') onClose()
+      else if (e.key === '0') resetView()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [prev, next, onClose])
+  }, [prev, next, onClose, resetView])
+
+  // Scroll-to-zoom (non-passive so we can preventDefault)
+  useEffect(() => {
+    const el = lbRef.current
+    if (!el) return
+    const onWheel = (e) => {
+      e.preventDefault()
+      setZoom(prev => {
+        const next = Math.min(Math.max(prev + (e.deltaY < 0 ? 0.25 : -0.25), 1), 5)
+        if (next === 1) setPan({ x: 0, y: 0 })
+        return next
+      })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Drag-to-pan while zoomed
+  useEffect(() => {
+    if (!dragging) return
+    const onMove = (e) => {
+      const src = e.touches ? e.touches[0] : e
+      setPan({ x: src.clientX - dragOrigin.current.x, y: src.clientY - dragOrigin.current.y })
+    }
+    const onUp = () => setDragging(false)
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    document.addEventListener('touchmove', onMove, { passive: false })
+    document.addEventListener('touchend', onUp)
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.removeEventListener('touchmove', onMove)
+      document.removeEventListener('touchend', onUp)
+    }
+  }, [dragging])
+
+  const handleImgPointerDown = (e) => {
+    e.stopPropagation()
+    if (zoom <= 1) return
+    dragOrigin.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+    setDragging(true)
+  }
+
+  const handleImgClick = (e) => {
+    e.stopPropagation()
+    if (dragging) return
+    setZoom(prev => {
+      if (prev > 1) { setPan({ x: 0, y: 0 }); return 1 }
+      return 2.5
+    })
+  }
 
   const current = images[idx]
 
   return (
-    <div className="cert-lightbox" onClick={onClose}>
+    <div ref={lbRef} className="cert-lightbox" onClick={onClose}>
       <button className="cert-lb-close" onClick={onClose} aria-label="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
+
+      {zoom > 1 && (
+        <button className="cert-lb-zoom-badge" onClick={e => { e.stopPropagation(); resetView() }}>
+          {Math.round(zoom * 10) / 10}× &nbsp;·&nbsp; click to reset
+        </button>
+      )}
 
       {images.length > 1 && (
         <>
@@ -104,6 +171,14 @@ function Lightbox({ images, startIndex, onClose }) {
           src={current.file}
           alt={current.caption || ''}
           className={`cert-lb-img${fading ? ' cert-lb-img--out' : ''}`}
+          style={{
+            transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+            cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in',
+            transition: dragging ? 'opacity 0.16s ease' : 'opacity 0.16s ease, transform 0.22s ease',
+          }}
+          onClick={handleImgClick}
+          onMouseDown={handleImgPointerDown}
+          draggable={false}
         />
         {current.caption && (
           <p className="cert-lb-caption">{current.caption}</p>
