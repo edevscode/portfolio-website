@@ -209,7 +209,7 @@ class Certificate(models.Model):
     expiry_date = models.DateField(blank=True, null=True)
     credential_id = models.CharField(max_length=200, blank=True, default='')
     credential_url = models.URLField(blank=True, null=True)
-    image = models.ImageField(upload_to='certificates/', blank=True, null=True)
+    image = models.FileField(upload_to='certificates/', blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

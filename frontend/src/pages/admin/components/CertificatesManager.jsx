@@ -14,6 +14,44 @@ function normalizeUrl(url) {
   }
 }
 
+function fileType(urlOrFile) {
+  const name = (urlOrFile instanceof File ? urlOrFile.name : (urlOrFile || '')).toLowerCase()
+  if (name.endsWith('.pdf')) return 'pdf'
+  if (name.endsWith('.doc') || name.endsWith('.docx')) return 'word'
+  return 'image'
+}
+
+function FilePreview({ src, file }) {
+  const type = file ? fileType(file) : fileType(src)
+  if (type === 'pdf') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fff1f0', borderRadius: 10, border: '1px solid #fca5a5', marginBottom: 10 }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><polyline points="9 9 10 9"/></svg>
+        <span style={{ fontSize: 13, color: '#dc2626', fontWeight: 600 }}>PDF document selected</span>
+        {src && !file && <a href={normalizeUrl(src)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#dc2626', marginLeft: 'auto' }}>View</a>}
+      </div>
+    )
+  }
+  if (type === 'word') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#eff6ff', borderRadius: 10, border: '1px solid #93c5fd', marginBottom: 10 }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><polyline points="9 9 10 9"/></svg>
+        <span style={{ fontSize: 13, color: '#2563eb', fontWeight: 600 }}>Word document selected</span>
+        {src && !file && <a href={normalizeUrl(src)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#2563eb', marginLeft: 'auto' }}>Download</a>}
+      </div>
+    )
+  }
+  // image
+  const imgSrc = file ? URL.createObjectURL(file) : normalizeUrl(src)
+  return (
+    <img
+      src={imgSrc}
+      alt="Preview"
+      style={{ width: '100%', maxHeight: 160, objectFit: 'contain', borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 10, background: '#f8fafc' }}
+    />
+  )
+}
+
 const EMPTY = {
   title: '',
   issuer: '',
@@ -91,7 +129,7 @@ export default function CertificatesManager() {
     const file = e.target.files?.[0]
     if (!file) return
     setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
+    setImagePreview(null) // FilePreview derives preview from the File object directly
   }
 
   const handleSubmit = async (e) => {
@@ -125,18 +163,25 @@ export default function CertificatesManager() {
     {
       key: 'image',
       label: '',
-      render: (val) =>
-        val ? (
-          <img
-            src={normalizeUrl(val)}
-            alt=""
-            style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, display: 'block' }}
-          />
-        ) : (
+      render: (val) => {
+        if (!val) return (
           <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f1f5f9', display: 'grid', placeItems: 'center' }}>
             <Award size={18} color="#94a3b8" />
           </div>
-        ),
+        )
+        const type = fileType(val)
+        if (type === 'pdf') return (
+          <div style={{ width: 40, height: 40, borderRadius: 8, background: '#fff1f0', display: 'grid', placeItems: 'center', border: '1px solid #fca5a5' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+        )
+        if (type === 'word') return (
+          <div style={{ width: 40, height: 40, borderRadius: 8, background: '#eff6ff', display: 'grid', placeItems: 'center', border: '1px solid #93c5fd' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+        )
+        return <img src={normalizeUrl(val)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+      },
     },
     { key: 'title', label: 'Certificate' },
     { key: 'issuer', label: 'Issuer' },
@@ -185,19 +230,21 @@ export default function CertificatesManager() {
           submitText={editingId ? 'Save Changes' : 'Add Certificate'}
           submitting={submitting}
         >
-          {/* Certificate image */}
+          {/* Certificate file (image, PDF, or Word) */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-              Certificate Image / Badge
+              Certificate File — Image, PDF, or Word
             </label>
-            {imagePreview && (
-              <img
-                src={imagePreview}
-                alt="Preview"
-                style={{ width: '100%', maxHeight: 160, objectFit: 'contain', borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 10, background: '#f8fafc' }}
-              />
+            {(imagePreview || imageFile) && (
+              <FilePreview src={imagePreview} file={imageFile} />
             )}
-            <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'block', width: '100%', fontSize: 13 }} />
+            <input
+              type="file"
+              accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={handleImageChange}
+              style={{ display: 'block', width: '100%', fontSize: 13 }}
+            />
+            <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>Accepted: JPG, PNG, GIF, PDF, DOC, DOCX</p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
