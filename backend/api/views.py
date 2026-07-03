@@ -10,9 +10,9 @@ from datetime import datetime
 from django.db.models import Q
 
 logger = logging.getLogger(__name__)
-from .models import Theme, Project, ProjectImage, ProjectVideo, Skill, Experience, About, SocialLink, Contact
+from .models import Theme, Project, ProjectImage, ProjectVideo, Certificate, Skill, Experience, About, SocialLink, Contact
 from .serializers import (
-    ThemeSerializer, ProjectSerializer, SkillSerializer,
+    ThemeSerializer, ProjectSerializer, CertificateSerializer, SkillSerializer,
     ExperienceSerializer, AboutSerializer, SocialLinkSerializer,
     ContactSerializer, PortfolioPublicSerializer
 )
@@ -261,6 +261,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+class CertificateViewSet(viewsets.ModelViewSet):
+    queryset = Certificate.objects.all()
+    serializer_class = CertificateSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+
 class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.all()
     serializer_class = SkillSerializer
@@ -338,20 +345,22 @@ class PortfolioPublicView(viewsets.ViewSet):
         """Get all public portfolio data."""
         about = About.objects.first()
         projects = Project.objects.filter(is_published=True)
+        certificates = Certificate.objects.all()
         skills = Skill.objects.all()
         experiences = Experience.objects.all()
         social_links = SocialLink.objects.filter(is_visible=True)
-        
+
         # Get current theme
         active_theme = Theme.objects.filter(is_active=True).first()
         if not active_theme:
             active_theme = self.get_seasonal_theme()
         if not active_theme:
             active_theme = Theme.objects.filter(season='default').first()
-        
+
         data = {
             'about': AboutSerializer(about).data if about else None,
             'projects': ProjectSerializer(projects, many=True).data,
+            'certificates': CertificateSerializer(certificates, many=True).data,
             'skills': SkillSerializer(skills, many=True).data,
             'experiences': ExperienceSerializer(experiences, many=True).data,
             'social_links': SocialLinkSerializer(social_links, many=True).data,

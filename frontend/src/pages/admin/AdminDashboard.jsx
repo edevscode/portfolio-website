@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Routes, Route, useLocation, useNavigate, NavLink } from 'react-router-dom'
-import { Menu, X, LogOut, FileText, Briefcase, Users, Home, Mail, Palette } from 'lucide-react'
+import { Menu, X, LogOut, FileText, Briefcase, Users, Home, Mail, Palette, Award } from 'lucide-react'
 import './AdminDashboard.css'
 import SetupWizard from './components/SetupWizard'
 import ProjectsManager from './components/ProjectsManager'
@@ -9,6 +9,7 @@ import ExperienceManager from './components/ExperienceManager'
 import AboutManager from './components/AboutManager'
 import ContactsManager from './components/ContactsManager'
 import ThemesManager from './components/ThemesManager'
+import CertificatesManager from './components/CertificatesManager'
 
 export default function AdminDashboard({ setIsAdmin }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -28,6 +29,7 @@ export default function AdminDashboard({ setIsAdmin }) {
       { label: 'Skills', icon: Users, path: '/admin/skills' },
       { label: 'Projects', icon: Briefcase, path: '/admin/projects' },
       { label: 'Experience', icon: FileText, path: '/admin/experience' },
+      { label: 'Certificates', icon: Award, path: '/admin/certificates' },
       { label: 'Contact', icon: Mail, path: '/admin/messages' },
       { label: 'Themes', icon: Palette, path: '/admin/themes' },
     ],
@@ -102,6 +104,7 @@ export default function AdminDashboard({ setIsAdmin }) {
             <Route path="/skills" element={<SkillsManager />} />
             <Route path="/experience" element={<ExperienceManager />} />
             <Route path="/about" element={<AboutManager />} />
+            <Route path="/certificates" element={<CertificatesManager />} />
             <Route path="/messages" element={<ContactsManager />} />
             <Route path="/themes" element={<ThemesManager />} />
           </Routes>

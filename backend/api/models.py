@@ -201,6 +201,27 @@ class ProjectVideo(models.Model):
         return f"{self.project.title} video #{self.order}"
 
 
+class Certificate(models.Model):
+    title = models.CharField(max_length=200)
+    issuer = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default='')
+    issue_date = models.DateField()
+    expiry_date = models.DateField(blank=True, null=True)
+    credential_id = models.CharField(max_length=200, blank=True, default='')
+    credential_url = models.URLField(blank=True, null=True)
+    image = models.ImageField(upload_to='certificates/', blank=True, null=True)
+    order = models.PositiveIntegerField(default=0)
+    is_featured = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'certificates'
+        ordering = ['order', '-issue_date']
+
+    def __str__(self):
+        return f"{self.title} — {self.issuer}"
+
+
 class Skill(models.Model):
     name = models.CharField(max_length=100)
     proficiency = models.PositiveIntegerField(default=80)  # 0-100

@@ -75,6 +75,12 @@ export const apiService = {
   updateProject: (slug, data) => api.patch(`/projects/${slug}/`, data),
   deleteProject: (slug) => api.delete(`/projects/${slug}/`),
 
+  // Certificates
+  getCertificates: () => api.get('/certificates/'),
+  createCertificate: (data) => api.post('/certificates/', data),
+  updateCertificate: (id, data) => api.patch(`/certificates/${id}/`, data),
+  deleteCertificate: (id) => api.delete(`/certificates/${id}/`),
+
   // Skills
   getSkills: () => api.get('/skills/'),
   getSkill: (id) => api.get(`/skills/${id}/`),

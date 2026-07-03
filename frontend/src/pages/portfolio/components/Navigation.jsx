@@ -61,6 +61,9 @@ export default function Navigation() {
           <li><a href="#experience" className="nav-link" onClick={handleNavClick} style={{
             color: navText
           }}>Experience</a></li>
+          <li><a href="#certificates" className="nav-link" onClick={handleNavClick} style={{
+            color: navText
+          }}>Certificates</a></li>
           <li><a href="#contact" className="nav-link" onClick={handleNavClick} style={{
             color: navText
           }}>Contact</a></li>

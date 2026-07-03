@@ -18,6 +18,7 @@ def health_check(request):
 router = DefaultRouter()
 router.register(r'themes', views.ThemeViewSet)
 router.register(r'projects', views.ProjectViewSet)
+router.register(r'certificates', views.CertificateViewSet)
 router.register(r'skills', views.SkillViewSet)
 router.register(r'experiences', views.ExperienceViewSet)
 router.register(r'about', views.AboutViewSet)
