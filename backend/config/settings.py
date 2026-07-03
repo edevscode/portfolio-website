@@ -266,7 +266,7 @@ LOGGING = {
         },
         'api': {
             'handlers': ['console'],
-            'level': 'WARNING',
+            'level': 'DEBUG',
             'propagate': False,
         },
     },

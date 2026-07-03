@@ -276,7 +276,7 @@ class CertificateViewSet(viewsets.ModelViewSet):
                     if hasattr(request, 'data') and hasattr(request.data, 'getlist')
                     else [])
         if not files:
-            logger.info('[cert] no files to save for cert_id=%s', certificate.id)
+            logger.warning('[cert] no files received for cert_id=%s (file_keys=%s)', certificate.id, all_file_keys)
             return
         if replace:
             CertificateFile.objects.filter(certificate=certificate).delete()
