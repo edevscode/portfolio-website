@@ -24,7 +24,7 @@ export default function AdminDashboard({ setIsAdmin }) {
 
   const menuItems = useMemo(
     () => [
-      { label: 'Overview', icon: Home, path: '/admin' },
+      { label: 'Overview', icon: Home, path: '/admin', end: true },
       { label: 'Hero & About', icon: FileText, path: '/admin/about' },
       { label: 'Skills', icon: Users, path: '/admin/skills' },
       { label: 'Projects', icon: Briefcase, path: '/admin/projects' },
@@ -66,6 +66,7 @@ export default function AdminDashboard({ setIsAdmin }) {
             <NavLink
               key={item.path}
               to={item.path}
+              end={!!item.end}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               onClick={() => {
                 if (window.innerWidth <= 768) setSidebarOpen(false)
