@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { User, FileText, Globe, Mail, Save, Upload, ExternalLink, Check } from 'lucide-react'
+import { User, FileText, Globe, Save, Upload, ExternalLink, Check } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import './Manager.css'
 import './AboutManager.css'
@@ -120,7 +120,6 @@ export default function AboutManager() {
         'hero_cta_primary_text','hero_cta_primary_link',
         'hero_cta_secondary_text','hero_cta_secondary_link',
         'about_intro','about_background','about_specialization','about_text',
-        'email','phone','location',
       ]
       textFields.forEach(k => fd.append(k, form[k] || ''))
       if (form.profile_image instanceof File) fd.append('profile_image', form.profile_image)
@@ -222,13 +221,6 @@ export default function AboutManager() {
               <p className="about-photo-hint">PDF, DOC or DOCX</p>
             </div>
           </div>
-
-          {/* Contact info card */}
-          <SectionCard title="Contact Info" icon={Mail}>
-            <Field label="Email" name="email" type="email" value={form.email} onChange={set} placeholder="you@example.com" />
-            <Field label="Phone" name="phone" value={form.phone} onChange={set} placeholder="+1 (555) 000-0000" />
-            <Field label="Location" name="location" value={form.location} onChange={set} placeholder="City, Country" />
-          </SectionCard>
 
         </div>
 

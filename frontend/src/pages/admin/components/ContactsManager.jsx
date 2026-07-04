@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Mail, MailOpen, Trash2, MessageSquare, Plus, Link } from 'lucide-react'
+import { Mail, MailOpen, Trash2, MessageSquare, Plus, Phone, MapPin, Save, Check } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import SocialLinksManager from './SocialLinksManager'
 import './Manager.css'
@@ -39,14 +39,42 @@ function MessageModal({ contact, onClose, onMarkRead }) {
   )
 }
 
+function CIField({ icon: Icon, label, name, type = 'text', value, onChange, placeholder }) {
+  return (
+    <div className="ci-field">
+      <label className="ci-label">{label}</label>
+      <div className="ci-input-wrap">
+        <Icon size={15} className="ci-input-icon" />
+        <input
+          type={type}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="ci-input"
+        />
+      </div>
+    </div>
+  )
+}
+
 export default function ContactsManager() {
   const [activeTab, setActiveTab] = useState('inbox')
+
+  // Inbox state
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const [viewing, setViewing] = useState(null)
   const socialRef = useRef(null)
 
-  useEffect(() => { loadContacts() }, [])
+  // Contact Info state
+  const [aboutId, setAboutId] = useState(null)
+  const [ciForm, setCiForm] = useState({ email: '', phone: '', location: '' })
+  const [ciSaving, setCiSaving] = useState(false)
+  const [ciSaved, setCiSaved] = useState(false)
+  const [ciError, setCiError] = useState('')
+
+  useEffect(() => { loadContacts(); loadAbout() }, [])
 
   const loadContacts = async () => {
     try {
@@ -57,6 +85,19 @@ export default function ContactsManager() {
       // silently ignore
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadAbout = async () => {
+    try {
+      const res = await apiService.getAbout()
+      if (res.data?.length > 0) {
+        const data = res.data[0]
+        setAboutId(data.id)
+        setCiForm({ email: data.email || '', phone: data.phone || '', location: data.location || '' })
+      }
+    } catch {
+      // silently ignore
     }
   }
 
@@ -76,6 +117,31 @@ export default function ContactsManager() {
       setContacts(prev => prev.filter(c => c.id !== id))
     } catch {
       alert('Failed to delete message.')
+    }
+  }
+
+  const handleCiChange = (e) => {
+    const { name, value } = e.target
+    setCiForm(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleCiSave = async (e) => {
+    e.preventDefault()
+    if (!aboutId) return
+    setCiSaving(true)
+    setCiError('')
+    try {
+      const fd = new FormData()
+      fd.append('email', ciForm.email)
+      fd.append('phone', ciForm.phone)
+      fd.append('location', ciForm.location)
+      await apiService.updateAbout(aboutId, fd)
+      setCiSaved(true)
+      setTimeout(() => setCiSaved(false), 2500)
+    } catch (err) {
+      setCiError(err.response?.data?.detail || err.message || 'Failed to save.')
+    } finally {
+      setCiSaving(false)
     }
   }
 
@@ -102,6 +168,9 @@ export default function ContactsManager() {
             <button type="button" className={`manager-tab${activeTab === 'social' ? ' active' : ''}`} onClick={() => setActiveTab('social')}>
               Social Links
             </button>
+            <button type="button" className={`manager-tab${activeTab === 'info' ? ' active' : ''}`} onClick={() => setActiveTab('info')}>
+              Contact Info
+            </button>
           </div>
         </div>
         {activeTab === 'social' && (
@@ -109,11 +178,28 @@ export default function ContactsManager() {
             <Plus size={18} /> Add Link
           </button>
         )}
+        {activeTab === 'info' && (
+          <button className="btn-primary" onClick={handleCiSave} disabled={ciSaving || !aboutId}>
+            {ciSaved
+              ? <><Check size={15} /> Saved</>
+              : ciSaving
+                ? <><span className="btn-spinner" /> Saving…</>
+                : <><Save size={15} /> Save</>}
+          </button>
+        )}
       </div>
 
       <div className="manager-section">
         {activeTab === 'social' ? (
           <SocialLinksManager ref={socialRef} embedded />
+        ) : activeTab === 'info' ? (
+          <form className="ci-form" onSubmit={handleCiSave}>
+            {ciError && <p className="ci-error">{ciError}</p>}
+            <p className="ci-desc">This information appears in the Contact section of your portfolio.</p>
+            <CIField icon={Mail}    label="Email"    name="email"    type="email" value={ciForm.email}    onChange={handleCiChange} placeholder="you@example.com" />
+            <CIField icon={Phone}   label="Phone"    name="phone"    value={ciForm.phone}    onChange={handleCiChange} placeholder="+1 (555) 000-0000" />
+            <CIField icon={MapPin}  label="Location" name="location" value={ciForm.location} onChange={handleCiChange} placeholder="City, Country" />
+          </form>
         ) : loading ? (
           <div className="loading">Loading…</div>
         ) : contacts.length === 0 ? (
