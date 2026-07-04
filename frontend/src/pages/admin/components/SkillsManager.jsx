@@ -75,7 +75,7 @@ export default function SkillsManager() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const payload = { name: formData.name, order: formData.order, proficiency: 80, icon: '' }
+      const payload = { name: formData.name, order: formData.order, proficiency: 80 }
       if (editingId) {
         await apiService.updateSkill(editingId, payload)
       } else {
