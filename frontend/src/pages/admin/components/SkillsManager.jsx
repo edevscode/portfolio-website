@@ -77,10 +77,11 @@ export default function SkillsManager() {
     setSubmitting(true)
     try {
       const targetOrder = formData.order
-      const conflicting = skills.filter(s => s.order === targetOrder && s.id !== editingId)
-      if (conflicting.length > 0) {
-        const maxOrder = Math.max(...skills.map(s => s.order), targetOrder)
-        await Promise.all(conflicting.map((s, i) => apiService.updateSkill(s.id, { order: maxOrder + 1 + i })))
+      const toShift = skills
+        .filter(s => s.order >= targetOrder && s.id !== editingId)
+        .sort((a, b) => b.order - a.order)
+      for (const s of toShift) {
+        await apiService.updateSkill(s.id, { order: s.order + 1 })
       }
       const payload = { name: formData.name, order: targetOrder, proficiency: 80 }
       if (editingId) {

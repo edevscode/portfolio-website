@@ -60,10 +60,11 @@ const SocialLinksManager = forwardRef(function SocialLinksManager({ embedded = f
     e.preventDefault()
     try {
       const targetOrder = formData.order
-      const conflicting = links.filter(l => l.order === targetOrder && l.id !== editingId)
-      if (conflicting.length > 0) {
-        const maxOrder = Math.max(...links.map(l => l.order), targetOrder)
-        await Promise.all(conflicting.map((l, i) => apiService.updateSocialLink(l.id, { order: maxOrder + 1 + i })))
+      const toShift = links
+        .filter(l => l.order >= targetOrder && l.id !== editingId)
+        .sort((a, b) => b.order - a.order)
+      for (const l of toShift) {
+        await apiService.updateSocialLink(l.id, { order: l.order + 1 })
       }
       const payload = {
         ...formData,

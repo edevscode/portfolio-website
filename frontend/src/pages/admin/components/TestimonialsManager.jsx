@@ -69,10 +69,11 @@ export default function TestimonialsManager() {
     e.preventDefault()
     try {
       const targetOrder = parseInt(formData.order) || 0
-      const conflicting = testimonials.filter(t => t.order === targetOrder && t.id !== editingId)
-      if (conflicting.length > 0) {
-        const maxOrder = Math.max(...testimonials.map(t => t.order), targetOrder)
-        await Promise.all(conflicting.map((t, i) => apiService.updateTestimonial(t.id, { order: maxOrder + 1 + i })))
+      const toShift = testimonials
+        .filter(t => t.order >= targetOrder && t.id !== editingId)
+        .sort((a, b) => b.order - a.order)
+      for (const t of toShift) {
+        await apiService.updateTestimonial(t.id, { order: t.order + 1 })
       }
       const payload = {
         client_name: formData.client_name,

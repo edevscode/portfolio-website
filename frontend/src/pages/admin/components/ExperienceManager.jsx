@@ -74,10 +74,11 @@ export default function ExperienceManager() {
     e.preventDefault()
     try {
       const targetOrder = formData.order
-      const conflicting = experiences.filter(x => x.order === targetOrder && x.id !== editingId)
-      if (conflicting.length > 0) {
-        const maxOrder = Math.max(...experiences.map(x => x.order), targetOrder)
-        await Promise.all(conflicting.map((x, i) => apiService.updateExperience(x.id, { order: maxOrder + 1 + i })))
+      const toShift = experiences
+        .filter(x => x.order >= targetOrder && x.id !== editingId)
+        .sort((a, b) => b.order - a.order)
+      for (const x of toShift) {
+        await apiService.updateExperience(x.id, { order: x.order + 1 })
       }
       const payload = {
         ...formData,

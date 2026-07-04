@@ -166,10 +166,11 @@ export default function CertificatesManager() {
     setSubmitting(true)
     try {
       const targetOrder = formData.order
-      const conflicting = certs.filter(c => c.order === targetOrder && c.id !== editingId)
-      if (conflicting.length > 0) {
-        const maxOrder = Math.max(...certs.map(c => c.order), targetOrder)
-        await Promise.all(conflicting.map((c, i) => apiService.updateCertificate(c.id, { order: maxOrder + 1 + i })))
+      const toShift = certs
+        .filter(c => c.order >= targetOrder && c.id !== editingId)
+        .sort((a, b) => b.order - a.order)
+      for (const c of toShift) {
+        await apiService.updateCertificate(c.id, { order: c.order + 1 })
       }
       const fd = new FormData()
       Object.entries(formData).forEach(([k, v]) => {

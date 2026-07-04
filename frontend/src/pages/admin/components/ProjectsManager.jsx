@@ -174,10 +174,11 @@ export default function ProjectsManager() {
     setSubmitting(true)
     try {
       const targetOrder = formData.order
-      const conflicting = projects.filter(p => p.order === targetOrder && p.id !== editingId)
-      if (conflicting.length > 0) {
-        const maxOrder = Math.max(...projects.map(p => p.order), targetOrder)
-        await Promise.all(conflicting.map((p, i) => apiService.updateProject(p.slug, { order: maxOrder + 1 + i })))
+      const toShift = projects
+        .filter(p => p.order >= targetOrder && p.id !== editingId)
+        .sort((a, b) => b.order - a.order)
+      for (const p of toShift) {
+        await apiService.updateProject(p.slug, { order: p.order + 1 })
       }
       const data = new FormData()
       data.append('title', formData.title || '')
