@@ -43,7 +43,7 @@ export default function ExperienceManager() {
       start_date: '',
       end_date: '',
       is_current: false,
-      order: 0,
+      order: experiences.length,
     })
     setEditingId(null)
     setShowForm(true)

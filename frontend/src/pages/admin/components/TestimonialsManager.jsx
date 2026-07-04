@@ -38,7 +38,7 @@ export default function TestimonialsManager() {
       client_name: '',
       quote: '',
       rating: '',
-      order: 0,
+      order: testimonials.length,
       is_visible: true,
     })
     setEditingId(null)

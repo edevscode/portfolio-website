@@ -53,7 +53,7 @@ export default function SkillsManager() {
     }
   }
 
-  const openAdd = () => { setFormData(EMPTY); setEditingId(null); setShowForm(true) }
+  const openAdd = () => { setFormData({ name: '', order: skills.length }); setEditingId(null); setShowForm(true) }
 
   const openEdit = (skill) => {
     setFormData({ name: skill.name, order: skill.order ?? 0 })
