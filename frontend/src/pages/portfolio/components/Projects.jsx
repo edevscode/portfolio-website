@@ -203,6 +203,9 @@ export default function Projects({ projects }) {
 
         {/* Section header */}
         <div className="projects-section-header">
+          <span className="projects-label" style={{ color: colors.accent, background: `color-mix(in srgb, ${colors.accent} 12%, transparent)` }}>
+            Portfolio
+          </span>
           <h2 className="projects-title" style={{ color: colors.primary }}>Featured Projects</h2>
           <p className="projects-subtitle" style={{ color: colors.text }}>
             A selection of work I've built and shipped

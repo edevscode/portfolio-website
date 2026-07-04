@@ -1,6 +1,5 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Menu, X } from 'lucide-react'
-import { useState } from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { getReadableTextColor } from '../../../utils/color'
@@ -8,6 +7,13 @@ import './Navigation.css'
 
 export default function Navigation() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
   const { config: seasonConfig } = useSeasonContext()
   const { theme } = useTheme()
 
@@ -28,7 +34,7 @@ export default function Navigation() {
   const navText = getReadableTextColor(colors.primary)
 
   return (
-    <nav className="portfolio-nav" style={{
+    <nav className={`portfolio-nav${scrolled ? ' nav-scrolled' : ''}`} style={{
       backgroundColor: colors.primary,
       borderBottomColor: colors.accent
     }}>

@@ -1,10 +1,15 @@
 .portfolio-nav {
   background: var(--secondary-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   position: sticky;
   top: 0;
   z-index: 100;
   border-bottom: 2px solid var(--accent-color);
+  transition: box-shadow 0.25s ease;
+}
+
+.portfolio-nav.nav-scrolled {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
 }
 
 .nav-container {

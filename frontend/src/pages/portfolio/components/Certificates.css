@@ -1,5 +1,5 @@
 .certs-section {
-  padding: 80px 0 100px;
+  padding: 96px 0 112px;
   position: relative;
 }
 
@@ -478,7 +478,21 @@
   background: #fff;
 }
 
+@media (max-width: 768px) {
+  .certs-section {
+    padding: 72px 0 88px;
+  }
+
+  .certs-heading {
+    margin-bottom: 40px;
+  }
+}
+
 @media (max-width: 600px) {
+  .certs-section {
+    padding: 56px 0 72px;
+  }
+
   .certs-grid {
     grid-template-columns: 1fr;
   }

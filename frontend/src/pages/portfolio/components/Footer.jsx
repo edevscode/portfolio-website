@@ -53,6 +53,7 @@ export default function Footer({ socialLinks }) {
             <li><a href="#skills" style={{ color: footerText }}>Skills</a></li>
             <li><a href="#projects" style={{ color: footerText }}>Projects</a></li>
             <li><a href="#experience" style={{ color: footerText }}>Experience</a></li>
+            <li><a href="#certificates" style={{ color: footerText }}>Certificates</a></li>
             <li><a href="#contact" style={{ color: footerText }}>Contact</a></li>
           </ul>
         </div>
