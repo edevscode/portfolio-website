@@ -68,11 +68,17 @@ export default function TestimonialsManager() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      const targetOrder = parseInt(formData.order) || 0
+      const conflicting = testimonials.filter(t => t.order === targetOrder && t.id !== editingId)
+      if (conflicting.length > 0) {
+        const maxOrder = Math.max(...testimonials.map(t => t.order), targetOrder)
+        await Promise.all(conflicting.map((t, i) => apiService.updateTestimonial(t.id, { order: maxOrder + 1 + i })))
+      }
       const payload = {
         client_name: formData.client_name,
         quote: formData.quote,
         rating: formData.rating === '' ? null : parseInt(formData.rating),
-        order: parseInt(formData.order) || 0,
+        order: targetOrder,
         is_visible: !!formData.is_visible,
       }
 

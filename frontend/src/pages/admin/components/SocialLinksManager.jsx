@@ -59,6 +59,12 @@ const SocialLinksManager = forwardRef(function SocialLinksManager({ embedded = f
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      const targetOrder = formData.order
+      const conflicting = links.filter(l => l.order === targetOrder && l.id !== editingId)
+      if (conflicting.length > 0) {
+        const maxOrder = Math.max(...links.map(l => l.order), targetOrder)
+        await Promise.all(conflicting.map((l, i) => apiService.updateSocialLink(l.id, { order: maxOrder + 1 + i })))
+      }
       const payload = {
         ...formData,
         icon: formData.icon || '',

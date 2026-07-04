@@ -73,6 +73,12 @@ export default function ExperienceManager() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      const targetOrder = formData.order
+      const conflicting = experiences.filter(x => x.order === targetOrder && x.id !== editingId)
+      if (conflicting.length > 0) {
+        const maxOrder = Math.max(...experiences.map(x => x.order), targetOrder)
+        await Promise.all(conflicting.map((x, i) => apiService.updateExperience(x.id, { order: maxOrder + 1 + i })))
+      }
       const payload = {
         ...formData,
         end_date: formData.end_date || null,
