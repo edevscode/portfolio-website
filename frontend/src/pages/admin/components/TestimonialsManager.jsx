@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Star } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import { FormField, ModalForm, Table } from './Form'
 import './Manager.css'
@@ -106,7 +106,13 @@ export default function TestimonialsManager() {
   return (
     <div className="manager">
       <div className="manager-header">
-        <h2>Testimonials</h2>
+        <div className="manager-header-left">
+          <Star size={22} color="#6366f1" />
+          <h2>Testimonials</h2>
+          {!loading && testimonials.length > 0 && (
+            <span className="skill-count-badge">{testimonials.length}</span>
+          )}
+        </div>
         <button className="btn-primary" onClick={handleAdd}>
           <Plus size={20} /> Add Testimonial
         </button>

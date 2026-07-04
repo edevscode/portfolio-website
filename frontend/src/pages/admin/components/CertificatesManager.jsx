@@ -250,6 +250,9 @@ export default function CertificatesManager() {
         <div className="manager-header-left">
           <Award size={22} color="#6366f1" />
           <h2>Certificates</h2>
+          {!loading && certs.length > 0 && (
+            <span className="skill-count-badge">{certs.length}</span>
+          )}
         </div>
         <button className="btn-primary" onClick={openAdd}>
           <Plus size={18} /> Add Certificate

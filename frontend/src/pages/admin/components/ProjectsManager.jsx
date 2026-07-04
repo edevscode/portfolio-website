@@ -265,7 +265,13 @@ export default function ProjectsManager() {
   return (
     <div className="manager">
       <div className="manager-header">
-        <h2>Projects</h2>
+        <div className="manager-header-left">
+          <Globe size={22} color="#6366f1" />
+          <h2>Projects</h2>
+          {!loading && projects.length > 0 && (
+            <span className="skill-count-badge">{projects.length}</span>
+          )}
+        </div>
         <button className="btn-primary" onClick={handleAdd}>
           <Plus size={16} /> Add Project
         </button>

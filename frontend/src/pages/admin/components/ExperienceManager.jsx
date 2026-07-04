@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Briefcase } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import { FormField, ModalForm, Table } from './Form'
 import './Manager.css'
@@ -113,7 +113,13 @@ export default function ExperienceManager() {
   return (
     <div className="manager">
       <div className="manager-header">
-        <h2>Experience</h2>
+        <div className="manager-header-left">
+          <Briefcase size={22} color="#6366f1" />
+          <h2>Experience</h2>
+          {!loading && experiences.length > 0 && (
+            <span className="skill-count-badge">{experiences.length}</span>
+          )}
+        </div>
         <button className="btn-primary" onClick={handleAdd}>
           <Plus size={20} /> Add Experience
         </button>
