@@ -38,7 +38,7 @@ export default function TestimonialsManager() {
       client_name: '',
       quote: '',
       rating: '',
-      order: testimonials.length,
+      order: testimonials.length === 0 ? 0 : Math.max(...testimonials.map(t => t.order)) + 1,
       is_visible: true,
     })
     setEditingId(null)

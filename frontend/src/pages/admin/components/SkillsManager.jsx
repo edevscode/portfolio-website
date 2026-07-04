@@ -53,7 +53,8 @@ export default function SkillsManager() {
     }
   }
 
-  const openAdd = () => { setFormData({ name: '', order: skills.length }); setEditingId(null); setShowForm(true) }
+  const nextOrder = (list) => list.length === 0 ? 0 : Math.max(...list.map(x => x.order)) + 1
+  const openAdd = () => { setFormData({ name: '', order: nextOrder(skills) }); setEditingId(null); setShowForm(true) }
 
   const openEdit = (skill) => {
     setFormData({ name: skill.name, order: skill.order ?? 0 })

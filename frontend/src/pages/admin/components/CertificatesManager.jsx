@@ -108,7 +108,7 @@ export default function CertificatesManager() {
   }
 
   const openAdd = () => {
-    setFormData({ ...EMPTY, order: certs.length })
+    setFormData({ ...EMPTY, order: certs.length === 0 ? 0 : Math.max(...certs.map(c => c.order)) + 1 })
     setExistingFiles([])
     setPendingFiles([])
     setEditingId(null)

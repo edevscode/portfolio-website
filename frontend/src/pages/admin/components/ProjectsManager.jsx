@@ -65,7 +65,7 @@ export default function ProjectsManager() {
 
   const handleAdd = () => {
     resetMedia()
-    setFormData({ title: '', description: '', url: '', github_url: '', project_type: 'live', is_featured: false, is_published: true, order: projects.length, image_items: [], video_items: [], thumbnail: null })
+    setFormData({ title: '', description: '', url: '', github_url: '', project_type: 'live', is_featured: false, is_published: true, order: projects.length === 0 ? 0 : Math.max(...projects.map(p => p.order)) + 1, image_items: [], video_items: [], thumbnail: null })
     setEditingId(null)
     setShowForm(true)
   }
