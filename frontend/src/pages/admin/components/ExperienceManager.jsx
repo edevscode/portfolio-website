@@ -43,7 +43,7 @@ export default function ExperienceManager() {
       start_date: '',
       end_date: '',
       is_current: false,
-      order: experiences.length === 0 ? 0 : Math.max(...experiences.map(x => x.order)) + 1,
+      order: experiences.length === 0 ? 1 : Math.max(...experiences.map(x => x.order)) + 1,
     })
     setEditingId(null)
     setShowForm(true)

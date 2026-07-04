@@ -34,7 +34,7 @@ const SocialLinksManager = forwardRef(function SocialLinksManager({ embedded = f
   }
 
   const handleAdd = () => {
-    setFormData({ platform: '', url: '', icon: '', order: links.length === 0 ? 0 : Math.max(...links.map(l => l.order)) + 1, is_visible: true })
+    setFormData({ platform: '', url: '', icon: '', order: links.length === 0 ? 1 : Math.max(...links.map(l => l.order)) + 1, is_visible: true })
     setEditingId(null)
     setShowForm(true)
   }
