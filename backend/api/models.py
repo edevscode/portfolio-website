@@ -73,8 +73,12 @@ class Theme(models.Model):
 
 class Project(models.Model):
     PROJECT_TYPES = [
-        ('live', 'Live Site / Web App'),
-        ('local', 'Local Project / Gallery'),
+        ('live',    'Live Site / Web App'),
+        ('mobile',  'Mobile App'),
+        ('desktop', 'Desktop App'),
+        ('api',     'API / Backend'),
+        ('design',  'UI/UX Design'),
+        ('local',   'Local Project / Gallery'),
     ]
     
     title = models.CharField(max_length=200)

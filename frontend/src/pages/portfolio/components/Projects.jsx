@@ -192,10 +192,25 @@ export default function Projects({ projects }) {
 
   if (!projects || projects.length === 0) return null
 
-  const liveProjects = projects.filter((p) => p.project_type === 'live' || !p.project_type)
-  const localProjects = projects.filter((p) => p.project_type === 'local')
+  const TYPE_LABELS = {
+    live:    'Web Applications',
+    mobile:  'Mobile Apps',
+    desktop: 'Desktop Apps',
+    api:     'API & Backend',
+    design:  'UI/UX Design',
+    local:   'Project Gallery',
+  }
 
-  const showTwoGroups = liveProjects.length > 0 && localProjects.length > 0
+  // Group by type, preserving insertion order
+  const groupMap = projects.reduce((acc, p) => {
+    const type = p.project_type || 'live'
+    if (!acc[type]) acc[type] = []
+    acc[type].push(p)
+    return acc
+  }, {})
+
+  const groupEntries = Object.entries(groupMap)
+  const showGroupLabels = groupEntries.length > 1
 
   return (
     <section className="projects" id="projects" style={{ backgroundColor: colors.background }}>
@@ -212,12 +227,19 @@ export default function Projects({ projects }) {
           </p>
         </div>
 
-        {/* Live projects */}
-        {liveProjects.length > 0 && (
-          <div className={`project-group ${showTwoGroups ? 'project-group--spaced' : ''}`}>
-            {showTwoGroups && <GroupLabel label="Web Applications" accent={colors.accent} />}
+        {groupEntries.map(([type, items]) => (
+          <div
+            key={type}
+            className={`project-group ${showGroupLabels ? 'project-group--spaced' : ''}`}
+          >
+            {showGroupLabels && (
+              <GroupLabel
+                label={TYPE_LABELS[type] || type}
+                accent={colors.accent}
+              />
+            )}
             <div className="projects-grid">
-              {liveProjects.map((project) => (
+              {items.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
@@ -227,24 +249,7 @@ export default function Projects({ projects }) {
               ))}
             </div>
           </div>
-        )}
-
-        {/* Local / gallery projects */}
-        {localProjects.length > 0 && (
-          <div className={`project-group ${showTwoGroups ? 'project-group--spaced' : ''}`}>
-            {showTwoGroups && <GroupLabel label="Project Gallery" accent={colors.accent} />}
-            <div className="projects-grid">
-              {localProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  colors={colors}
-                  onNavigate={navigate}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        ))}
 
       </div>
     </section>

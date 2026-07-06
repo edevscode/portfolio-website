@@ -333,36 +333,17 @@ export default function ProjectsManager() {
 
           <div className="form-field">
             <label>Project Type</label>
-            <div className="type-cards">
-              <label className={`type-card ${formData.project_type === 'live' ? 'type-card--active' : ''}`}>
-                <input
-                  type="radio"
-                  name="project_type"
-                  value="live"
-                  checked={formData.project_type === 'live'}
-                  onChange={() => setFormData({ ...formData, project_type: 'live' })}
-                />
-                <Globe size={18} className="type-card__icon" />
-                <div>
-                  <strong>Live Site</strong>
-                  <span>Has a public URL</span>
-                </div>
-              </label>
-              <label className={`type-card ${formData.project_type === 'local' ? 'type-card--active' : ''}`}>
-                <input
-                  type="radio"
-                  name="project_type"
-                  value="local"
-                  checked={formData.project_type === 'local'}
-                  onChange={() => setFormData({ ...formData, project_type: 'local' })}
-                />
-                <Image size={18} className="type-card__icon" />
-                <div>
-                  <strong>Gallery Project</strong>
-                  <span>Images &amp; videos only</span>
-                </div>
-              </label>
-            </div>
+            <select
+              value={formData.project_type}
+              onChange={(e) => setFormData({ ...formData, project_type: e.target.value })}
+            >
+              <option value="live">Live Site / Web App</option>
+              <option value="mobile">Mobile App</option>
+              <option value="desktop">Desktop App</option>
+              <option value="api">API / Backend</option>
+              <option value="design">UI/UX Design</option>
+              <option value="local">Local Project / Gallery</option>
+            </select>
           </div>
 
           <FormField
