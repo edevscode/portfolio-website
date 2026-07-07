@@ -141,7 +141,11 @@ export default function VisitorsManager() {
                       <td>
                         <span className="vm-flag">{flagEmoji(v.country_code)}</span>
                         <span className="vm-loc">
-                          {[v.city, v.country].filter(Boolean).join(', ') || 'Unknown'}
+                          {[
+                              v.city,
+                              v.region && v.region !== v.city ? v.region : null,
+                              v.country,
+                            ].filter(Boolean).join(', ') || 'Unknown'}
                         </span>
                       </td>
                       <td>

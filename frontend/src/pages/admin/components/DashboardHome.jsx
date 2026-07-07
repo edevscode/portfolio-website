@@ -219,7 +219,11 @@ export default function DashboardHome() {
                   </span>
                   <div className="dh-visitor-info">
                     <span className="dh-visitor-loc">
-                      {[v.city, v.country].filter(Boolean).join(', ') || 'Unknown location'}
+                      {[
+                        v.city,
+                        v.region && v.region !== v.city ? v.region : null,
+                        v.country,
+                      ].filter(Boolean).join(', ') || 'Unknown location'}
                     </span>
                     <span className="dh-visitor-meta">
                       <DeviceIcon type={v.device_type} size={12} />
