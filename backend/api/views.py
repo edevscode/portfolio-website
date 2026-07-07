@@ -35,11 +35,30 @@ def _get_geo(ip):
     try:
         r = http_requests.get(
             f'http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city',
-            timeout=3,
+            timeout=5,
         )
-        d = r.json()
-        if d.get('status') == 'success':
-            return d
+        if r.status_code == 200:
+            d = r.json()
+            if d.get('status') == 'success':
+                return d
+    except Exception:
+        pass
+    try:
+        r2 = http_requests.get(
+            f'https://ipapi.co/{ip}/json/',
+            timeout=5,
+            headers={'User-Agent': 'portfolio-tracker/1.0'},
+        )
+        if r2.status_code == 200:
+            d2 = r2.json()
+            if d2.get('country_name') and not d2.get('error'):
+                return {
+                    'country': d2.get('country_name', ''),
+                    'countryCode': d2.get('country_code', ''),
+                    'regionName': d2.get('region', ''),
+                    'city': d2.get('city', ''),
+                    'status': 'success',
+                }
     except Exception:
         pass
     return {}
