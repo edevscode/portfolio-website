@@ -116,7 +116,7 @@ export const apiService = {
 
   // Visitors
   logVisit: (data) => api.post('/visitors/', data),
-  getRecentVisitors: () => api.get('/visitors/recent/'),
+  getRecentVisitors: () => api.get('/visitors/'),
   getVisitorStats: () => api.get('/visitors/stats/'),
 
   // Portfolio

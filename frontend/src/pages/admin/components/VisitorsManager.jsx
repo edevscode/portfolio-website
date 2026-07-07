@@ -46,7 +46,10 @@ export default function VisitorsManager() {
         apiService.getRecentVisitors(),
       ])
       if (s.status === 'fulfilled') setStats(s.value.data)
-      if (r.status === 'fulfilled') setVisitors(r.value.data || [])
+      if (r.status === 'fulfilled') {
+        const d = r.value.data
+        setVisitors(Array.isArray(d) ? d : (d?.results ?? []))
+      }
     } finally {
       setLoading(false)
       setRefreshing(false)

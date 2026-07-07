@@ -539,6 +539,10 @@ class VisitorViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
 
+    def list(self, request, *args, **kwargs):
+        qs = Visitor.objects.order_by('-visited_at')[:50]
+        return Response(VisitorSerializer(qs, many=True).data)
+
     def create(self, request, *args, **kwargs):
         ip = _get_client_ip(request)
         geo = _get_geo(ip)
@@ -556,13 +560,6 @@ class VisitorViewSet(viewsets.ModelViewSet):
             referrer=(request.data.get('referrer') or '')[:500],
         )
         return Response({'id': visitor.id}, status=status.HTTP_201_CREATED)
-
-    @action(detail=False, methods=['get'])
-    def recent(self, request):
-        if not request.user.is_staff:
-            return Response({'detail': 'Forbidden'}, status=403)
-        qs = Visitor.objects.order_by('-visited_at')[:30]
-        return Response(VisitorSerializer(qs, many=True).data)
 
     @action(detail=False, methods=['get'])
     def stats(self, request):

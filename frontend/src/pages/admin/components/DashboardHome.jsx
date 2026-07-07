@@ -104,8 +104,10 @@ export default function DashboardHome() {
 
       if (statsRes.status === 'fulfilled')
         setStats(statsRes.value.data)
-      if (recentRes.status === 'fulfilled')
-        setVisitors(recentRes.value.data || [])
+      if (recentRes.status === 'fulfilled') {
+        const d = recentRes.value.data
+        setVisitors(Array.isArray(d) ? d : (d?.results ?? []))
+      }
       if (contactsRes.status === 'fulfilled')
         setContacts(contactsRes.value.data || [])
       if (portfolioRes.status === 'fulfilled') {
