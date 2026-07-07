@@ -151,10 +151,10 @@ class VisitorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Visitor
         fields = [
-            'id', 'ip_address', 'country', 'country_code', 'city', 'region',
+            'id', 'country', 'country_code', 'city', 'region',
             'device_type', 'browser', 'referrer', 'visited_at',
         ]
         read_only_fields = [
-            'id', 'ip_address', 'country', 'country_code', 'city', 'region',
+            'id', 'country', 'country_code', 'city', 'region',
             'device_type', 'browser', 'visited_at',
         ]
