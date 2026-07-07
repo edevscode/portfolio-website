@@ -34,12 +34,14 @@ function DeviceIcon({ type }) {
 export default function VisitorsManager() {
   const [stats, setStats]       = useState({ total: 0, today: 0, countries: [], devices: [] })
   const [visitors, setVisitors] = useState([])
+  const [visitorError, setVisitorError] = useState(null)
   const [loading, setLoading]   = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     else setRefreshing(true)
+    setVisitorError(null)
     try {
       const [s, r] = await Promise.allSettled([
         apiService.getVisitorStats(),
@@ -49,6 +51,12 @@ export default function VisitorsManager() {
       if (r.status === 'fulfilled') {
         const d = r.value.data
         setVisitors(Array.isArray(d) ? d : (d?.results ?? []))
+      } else {
+        const msg = r.reason?.response?.data?.detail
+          || r.reason?.response?.statusText
+          || r.reason?.message
+          || 'Failed to load visitor log'
+        setVisitorError(`${r.reason?.response?.status ?? ''} ${msg}`.trim())
       }
     } finally {
       setLoading(false)
@@ -124,6 +132,10 @@ export default function VisitorsManager() {
 
           {loading ? (
             <div className="dh-empty">Loading…</div>
+          ) : visitorError ? (
+            <div className="dh-empty vm-error">
+              <strong>Could not load visitor log:</strong><br />{visitorError}
+            </div>
           ) : visitors.length === 0 ? (
             <div className="dh-empty">No visitors yet. Share your portfolio!</div>
           ) : (

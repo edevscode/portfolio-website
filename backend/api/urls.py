@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from .views_login import login_view
+from .views import visitor_log
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -31,5 +32,6 @@ router.register(r'portfolio', views.PortfolioPublicView, basename='portfolio')
 urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('auth/login/', login_view, name='login'),
+    path('visitors/log/', visitor_log, name='visitor-log'),
     path('', include(router.urls)),
 ]

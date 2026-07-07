@@ -2,7 +2,7 @@ import logging
 import traceback
 import requests as http_requests
 from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes as drf_permission_classes
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.authtoken.models import Token
@@ -526,6 +526,15 @@ class PortfolioPublicView(viewsets.ViewSet):
             season = 'spring'
         
         return Theme.objects.filter(season=season).first()
+
+
+@api_view(['GET'])
+@drf_permission_classes([permissions.IsAuthenticated])
+def visitor_log(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return Response({'detail': 'Forbidden'}, status=403)
+    qs = Visitor.objects.order_by('-visited_at')[:50]
+    return Response(VisitorSerializer(qs, many=True).data)
 
 
 class VisitorViewSet(viewsets.ModelViewSet):
