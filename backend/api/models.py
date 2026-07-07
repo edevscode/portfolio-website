@@ -329,12 +329,32 @@ class Contact(models.Model):
     message = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         db_table = 'contacts'
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.name} - {self.subject}"
+
+
+class Visitor(models.Model):
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    country = models.CharField(max_length=100, blank=True, default='')
+    country_code = models.CharField(max_length=10, blank=True, default='')
+    city = models.CharField(max_length=100, blank=True, default='')
+    region = models.CharField(max_length=100, blank=True, default='')
+    user_agent = models.TextField(blank=True, default='')
+    device_type = models.CharField(max_length=20, blank=True, default='')
+    browser = models.CharField(max_length=100, blank=True, default='')
+    referrer = models.CharField(max_length=500, blank=True, default='')
+    visited_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'visitors'
+        ordering = ['-visited_at']
+
+    def __str__(self):
+        return f"{self.ip_address} — {self.country} — {self.visited_at}"
 
 

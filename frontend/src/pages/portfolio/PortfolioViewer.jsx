@@ -51,8 +51,13 @@ export default function PortfolioViewer() {
 
   useEffect(() => {
     loadPortfolio()
-    // Refresh theme periodically to check for seasonal changes
-    const interval = setInterval(refreshTheme, 3600000) // Every hour
+    const interval = setInterval(refreshTheme, 3600000)
+    // Log visit once per browser session
+    if (!sessionStorage.getItem('_pv')) {
+      apiService.logVisit({ referrer: document.referrer || '' })
+        .then(() => sessionStorage.setItem('_pv', '1'))
+        .catch(() => {})
+    }
     return () => clearInterval(interval)
   }, [])
 

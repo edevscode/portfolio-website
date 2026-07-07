@@ -25,6 +25,7 @@ router.register(r'experiences', views.ExperienceViewSet)
 router.register(r'about', views.AboutViewSet)
 router.register(r'social-links', views.SocialLinkViewSet)
 router.register(r'contacts', views.ContactViewSet)
+router.register(r'visitors', views.VisitorViewSet, basename='visitor')
 router.register(r'portfolio', views.PortfolioPublicView, basename='portfolio')
 
 urlpatterns = [

@@ -114,6 +114,11 @@ export const apiService = {
   markContactAsRead: (id) => api.post(`/contacts/${id}/mark_as_read/`),
   deleteContact: (id) => api.delete(`/contacts/${id}/`),
 
+  // Visitors
+  logVisit: (data) => api.post('/visitors/', data),
+  getRecentVisitors: () => api.get('/visitors/recent/'),
+  getVisitorStats: () => api.get('/visitors/stats/'),
+
   // Portfolio
   getPortfolio: () => api.get('/portfolio/all/'),
 }

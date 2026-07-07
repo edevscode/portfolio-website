@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Theme, Project, ProjectImage, ProjectVideo, Certificate, CertificateFile, Skill, Experience, About, SocialLink, Contact
+from .models import Theme, Project, ProjectImage, ProjectVideo, Certificate, CertificateFile, Skill, Experience, About, SocialLink, Contact, Visitor
 
 
 class ThemeSerializer(serializers.ModelSerializer):
@@ -145,3 +145,16 @@ class PortfolioPublicSerializer(serializers.Serializer):
     experiences = ExperienceSerializer(many=True)
     social_links = SocialLinkSerializer(many=True)
     current_theme = ThemeSerializer()
+
+
+class VisitorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Visitor
+        fields = [
+            'id', 'ip_address', 'country', 'country_code', 'city', 'region',
+            'device_type', 'browser', 'referrer', 'visited_at',
+        ]
+        read_only_fields = [
+            'id', 'ip_address', 'country', 'country_code', 'city', 'region',
+            'device_type', 'browser', 'visited_at',
+        ]

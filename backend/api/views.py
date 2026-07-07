@@ -1,21 +1,71 @@
 import logging
 import traceback
+import requests as http_requests
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
+from django.db.models import Q, Count
+from django.utils import timezone
 from datetime import datetime
-from django.db.models import Q
 
 logger = logging.getLogger(__name__)
-from .models import Theme, Project, ProjectImage, ProjectVideo, Certificate, CertificateFile, Skill, Experience, About, SocialLink, Contact
+from .models import Theme, Project, ProjectImage, ProjectVideo, Certificate, CertificateFile, Skill, Experience, About, SocialLink, Contact, Visitor
 from .serializers import (
     ThemeSerializer, ProjectSerializer, CertificateSerializer, CertificateFileSerializer,
     SkillSerializer, ExperienceSerializer, AboutSerializer, SocialLinkSerializer,
-    ContactSerializer, PortfolioPublicSerializer
+    ContactSerializer, PortfolioPublicSerializer, VisitorSerializer
 )
+
+
+# ── Visitor helpers ──────────────────────────────────────────────────────────
+
+def _get_client_ip(request):
+    xff = request.META.get('HTTP_X_FORWARDED_FOR')
+    if xff:
+        return xff.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
+def _get_geo(ip):
+    if not ip or ip in ('127.0.0.1', '::1', 'testserver'):
+        return {}
+    try:
+        r = http_requests.get(
+            f'http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city',
+            timeout=3,
+        )
+        d = r.json()
+        if d.get('status') == 'success':
+            return d
+    except Exception:
+        pass
+    return {}
+
+
+def _parse_device(ua):
+    ua_l = ua.lower()
+    if any(x in ua_l for x in ('mobile', 'android', 'iphone', 'ipod', 'blackberry', 'windows phone')):
+        return 'mobile'
+    if any(x in ua_l for x in ('tablet', 'ipad')):
+        return 'tablet'
+    return 'desktop'
+
+
+def _parse_browser(ua):
+    if 'Edg/' in ua:
+        return 'Edge'
+    if 'Firefox/' in ua:
+        return 'Firefox'
+    if 'OPR/' in ua or 'Opera/' in ua:
+        return 'Opera'
+    if 'Chrome/' in ua:
+        return 'Chrome'
+    if 'Safari/' in ua:
+        return 'Safari'
+    return 'Other'
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
@@ -477,3 +527,62 @@ class PortfolioPublicView(viewsets.ViewSet):
         
         return Theme.objects.filter(season=season).first()
 
+
+class VisitorViewSet(viewsets.ModelViewSet):
+    queryset = Visitor.objects.all()
+    serializer_class = VisitorSerializer
+    parser_classes = (JSONParser,)
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+    def create(self, request, *args, **kwargs):
+        ip = _get_client_ip(request)
+        geo = _get_geo(ip)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+
+        visitor = Visitor.objects.create(
+            ip_address=ip or None,
+            country=geo.get('country', ''),
+            country_code=geo.get('countryCode', ''),
+            city=geo.get('city', ''),
+            region=geo.get('regionName', ''),
+            user_agent=ua,
+            device_type=_parse_device(ua),
+            browser=_parse_browser(ua),
+            referrer=(request.data.get('referrer') or '')[:500],
+        )
+        return Response({'id': visitor.id}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'])
+    def recent(self, request):
+        if not request.user.is_staff:
+            return Response({'detail': 'Forbidden'}, status=403)
+        qs = Visitor.objects.order_by('-visited_at')[:30]
+        return Response(VisitorSerializer(qs, many=True).data)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        if not request.user.is_staff:
+            return Response({'detail': 'Forbidden'}, status=403)
+        today = timezone.now().date()
+        countries = list(
+            Visitor.objects.exclude(country='')
+            .values('country', 'country_code')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+        )
+        devices = list(
+            Visitor.objects.values('device_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        return Response({
+            'total': Visitor.objects.count(),
+            'today': Visitor.objects.filter(visited_at__date=today).count(),
+            'countries': countries,
+            'devices': devices,
+        })
