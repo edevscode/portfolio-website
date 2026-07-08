@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { User, FileText, Globe, Save, Upload, ExternalLink, Check } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
-import MarkdownEditor from '../../../components/MarkdownEditor'
+import RichTextEditor from '../../../components/RichTextEditor'
 import './Manager.css'
 import './AboutManager.css'
 
@@ -36,11 +36,11 @@ function Field({ label, name, type = 'text', value, onChange, placeholder, hint,
         {hint && <span className="about-hint">{hint}</span>}
       </label>
       {type === 'markdown' ? (
-        <MarkdownEditor
+        <RichTextEditor
           value={value || ''}
           onChange={onChange}
           placeholder={placeholder}
-          rows={rows || 4}
+          minHeight={(rows || 4) * 26}
         />
       ) : type === 'textarea' ? (
         <textarea

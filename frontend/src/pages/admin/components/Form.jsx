@@ -1,6 +1,6 @@
 import React from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import MarkdownEditor from '../../../components/MarkdownEditor'
+import RichTextEditor from '../../../components/RichTextEditor'
 import './Form.css'
 
 export function FormField({ label, name, type = 'text', value, onChange, placeholder, required, error, rows, accept, multiple, options }) {
@@ -13,11 +13,11 @@ export function FormField({ label, name, type = 'text', value, onChange, placeho
         </label>
       )}
       {type === 'markdown' ? (
-        <MarkdownEditor
+        <RichTextEditor
           value={value || ''}
           onChange={onChange}
           placeholder={placeholder}
-          rows={rows || 5}
+          minHeight={(rows || 5) * 24}
         />
       ) : type === 'textarea' ? (
         <textarea
