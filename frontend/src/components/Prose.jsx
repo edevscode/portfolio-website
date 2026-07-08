@@ -7,13 +7,10 @@ function stripClipboardMarkers(str) {
   return str.replace(/<!--StartFragment-->/g, '').replace(/<!--EndFragment-->/g, '').trim()
 }
 
-// Detect HTML by looking for common block/inline tags (not just any `<`)
-const HTML_TAG = /<(p|ul|ol|li|h[1-6]|div|span|br|hr|table|thead|tbody|tr|td|th|blockquote|strong|em|b|i|u|s|a|code|pre)\b/i
-
 export default function Prose({ children, className = '', style }) {
   if (!children) return null
   const clean = stripClipboardMarkers(String(children))
-  if (HTML_TAG.test(clean)) {
+  if (/<[a-z]/i.test(clean)) {
     return (
       <div
         className={`prose ${className}`}
