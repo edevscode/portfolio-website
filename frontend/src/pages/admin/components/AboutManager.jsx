@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { User, FileText, Globe, Save, Upload, ExternalLink, Check } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
+import MarkdownEditor from '../../../components/MarkdownEditor'
 import './Manager.css'
 import './AboutManager.css'
 
@@ -34,7 +35,14 @@ function Field({ label, name, type = 'text', value, onChange, placeholder, hint,
         {label}
         {hint && <span className="about-hint">{hint}</span>}
       </label>
-      {type === 'textarea' ? (
+      {type === 'markdown' ? (
+        <MarkdownEditor
+          value={value || ''}
+          onChange={onChange}
+          placeholder={placeholder}
+          rows={rows || 4}
+        />
+      ) : type === 'textarea' ? (
         <textarea
           name={name}
           value={value || ''}
@@ -251,10 +259,10 @@ export default function AboutManager() {
           </SectionCard>
 
           <SectionCard title="About Section" icon={FileText}>
-            <Field label="Intro" name="about_intro" type="textarea" value={form.about_intro} onChange={set} placeholder="Opening line of your about section…" rows={2} />
-            <Field label="Background" name="about_background" type="textarea" value={form.about_background} onChange={set} placeholder="Your background and experience…" rows={3} />
-            <Field label="Specialization" name="about_specialization" type="textarea" value={form.about_specialization} onChange={set} placeholder="What you specialize in…" rows={2} />
-            <Field label="General Bio" name="about_text" type="textarea" value={form.about_text} onChange={set} placeholder="Full bio text used across the site…" rows={4}
+            <Field label="Intro" name="about_intro" type="markdown" value={form.about_intro} onChange={set} placeholder="Opening line of your about section…" rows={3} />
+            <Field label="Background" name="about_background" type="markdown" value={form.about_background} onChange={set} placeholder="Your background and experience…" rows={5} />
+            <Field label="Specialization" name="about_specialization" type="markdown" value={form.about_specialization} onChange={set} placeholder="What you specialize in…" rows={4} />
+            <Field label="General Bio" name="about_text" type="markdown" value={form.about_text} onChange={set} placeholder="Full bio text used across the site…" rows={5}
               hint="(fallback / general purpose)" />
           </SectionCard>
 

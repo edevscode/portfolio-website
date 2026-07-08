@@ -62,7 +62,9 @@ export default function About({ about }) {
           <div className="about-content">
 
             {about?.about_intro && (
-              <p className="about-intro-text">{about.about_intro}</p>
+              <div className="about-intro-text">
+                <Prose style={{ color: colors.text }}>{about.about_intro}</Prose>
+              </div>
             )}
 
             {about?.about_background && (

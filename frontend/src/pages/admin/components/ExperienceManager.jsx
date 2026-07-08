@@ -153,10 +153,10 @@ export default function ExperienceManager() {
           />
           <FormField
             label="Description"
-            type="textarea"
+            type="markdown"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            required
+            rows={6}
           />
           <FormField
             label="Start Date"
