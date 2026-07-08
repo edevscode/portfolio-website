@@ -4,6 +4,20 @@ import { apiService } from '../../../services/apiService'
 import './Manager.css'
 import './AboutManager.css'
 
+function cleanHtmlPaste(html) {
+  const tmp = document.createElement('div')
+  tmp.innerHTML = html
+    .replace(/<!--StartFragment-->/g, '')
+    .replace(/<!--EndFragment-->/g, '')
+  tmp.querySelectorAll('script,style,link,meta,iframe,object,embed').forEach(el => el.remove())
+  tmp.querySelectorAll('*').forEach(el => {
+    const href = el.tagName === 'A' ? el.getAttribute('href') : null
+    Array.from(el.attributes).forEach(a => el.removeAttribute(a.name))
+    if (href) el.setAttribute('href', href)
+  })
+  return tmp.innerHTML.trim()
+}
+
 const EMPTY = {
   title: 'Profile',
   hero_name: '', hero_role: '', hero_tagline: '',
@@ -39,6 +53,18 @@ function Field({ label, name, type = 'text', value, onChange, placeholder, hint,
           name={name}
           value={value || ''}
           onChange={onChange}
+          onPaste={type === 'markdown' ? (e) => {
+            const html = e.clipboardData?.getData('text/html')
+            if (!html) return
+            const clean = cleanHtmlPaste(html)
+            if (!clean) return
+            e.preventDefault()
+            const el = e.target
+            const start = el.selectionStart ?? 0
+            const end = el.selectionEnd ?? (value || '').length
+            const next = (value || '').slice(0, start) + clean + (value || '').slice(end)
+            onChange({ target: { name, value: next } })
+          } : undefined}
           placeholder={placeholder}
           rows={rows || 3}
           className="about-input about-textarea"

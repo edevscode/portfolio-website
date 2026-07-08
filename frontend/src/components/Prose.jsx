@@ -3,16 +3,15 @@ import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import './Prose.css'
 
-function stripClipboardMarkers(str) {
-  return str.replace(/<!--StartFragment-->/g, '').replace(/<!--EndFragment-->/g, '').trim()
-}
-
 export default function Prose({ children, className = '', style }) {
   if (!children) return null
-  const clean = stripClipboardMarkers(String(children))
+  const text = String(children)
+    .replace(/<!--StartFragment-->/g, '')
+    .replace(/<!--EndFragment-->/g, '')
+    .trim()
   return (
     <div className={`prose ${className}`} style={style}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{clean}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{text}</ReactMarkdown>
     </div>
   )
 }
