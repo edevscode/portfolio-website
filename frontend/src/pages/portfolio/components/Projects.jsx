@@ -6,9 +6,16 @@ import { API_BASE_URL } from '../../../services/apiService'
 import { getReadableTextColor } from '../../../utils/color'
 import './Projects.css'
 
-function stripMarkdown(text) {
+function stripToPlainText(text) {
   if (!text) return ''
   return text
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
     .replace(/#{1,6}\s/g, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/\*(.+?)\*/g, '$1')
@@ -16,7 +23,7 @@ function stripMarkdown(text) {
     .replace(/^[-*+]\s/gm, '')
     .replace(/^\d+\.\s/gm, '')
     .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
@@ -35,7 +42,7 @@ function normalizeMediaUrl(url) {
 function ProjectCard({ project, colors, onNavigate }) {
   const [hovered, setHovered] = useState(false)
   const isLocal = project.project_type === 'local'
-  const desc = stripMarkdown(project.description)
+  const desc = stripToPlainText(project.description)
   const thumbnailUrl = normalizeMediaUrl(project.thumbnail)
 
   const accentRgb = hexToRgbParts(colors.accent)
