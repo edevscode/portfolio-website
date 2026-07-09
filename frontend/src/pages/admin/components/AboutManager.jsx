@@ -1,22 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { User, FileText, Globe, Save, Upload, ExternalLink, Check } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
+import SimpleRichArea from '../../../components/SimpleRichArea'
 import './Manager.css'
 import './AboutManager.css'
-
-function cleanHtmlPaste(html) {
-  const tmp = document.createElement('div')
-  tmp.innerHTML = html
-    .replace(/<!--StartFragment-->/g, '')
-    .replace(/<!--EndFragment-->/g, '')
-  tmp.querySelectorAll('script,style,link,meta,iframe,object,embed').forEach(el => el.remove())
-  tmp.querySelectorAll('*').forEach(el => {
-    const href = el.tagName === 'A' ? el.getAttribute('href') : null
-    Array.from(el.attributes).forEach(a => el.removeAttribute(a.name))
-    if (href) el.setAttribute('href', href)
-  })
-  return tmp.innerHTML.trim()
-}
 
 const EMPTY = {
   title: 'Profile',
@@ -48,23 +35,20 @@ function Field({ label, name, type = 'text', value, onChange, placeholder, hint,
         {label}
         {hint && <span className="about-hint">{hint}</span>}
       </label>
-      {type === 'textarea' || type === 'markdown' ? (
+      {type === 'markdown' ? (
+        <SimpleRichArea
+          name={name}
+          value={value || ''}
+          onChange={onChange}
+          placeholder={placeholder}
+          rows={rows || 3}
+          className="about-input"
+        />
+      ) : type === 'textarea' ? (
         <textarea
           name={name}
           value={value || ''}
           onChange={onChange}
-          onPaste={type === 'markdown' ? (e) => {
-            const html = e.clipboardData?.getData('text/html')
-            if (!html) return
-            const clean = cleanHtmlPaste(html)
-            if (!clean) return
-            e.preventDefault()
-            const el = e.target
-            const start = el.selectionStart ?? 0
-            const end = el.selectionEnd ?? (value || '').length
-            const next = (value || '').slice(0, start) + clean + (value || '').slice(end)
-            onChange({ target: { name, value: next } })
-          } : undefined}
           placeholder={placeholder}
           rows={rows || 3}
           className="about-input about-textarea"

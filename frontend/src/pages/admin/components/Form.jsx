@@ -1,35 +1,7 @@
 import React from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
+import SimpleRichArea from '../../../components/SimpleRichArea'
 import './Form.css'
-
-function cleanHtmlPaste(html) {
-  const tmp = document.createElement('div')
-  tmp.innerHTML = html
-    .replace(/<!--StartFragment-->/g, '')
-    .replace(/<!--EndFragment-->/g, '')
-  tmp.querySelectorAll('script,style,link,meta,iframe,object,embed').forEach(el => el.remove())
-  tmp.querySelectorAll('*').forEach(el => {
-    const href = el.tagName === 'A' ? el.getAttribute('href') : null
-    Array.from(el.attributes).forEach(a => el.removeAttribute(a.name))
-    if (href) el.setAttribute('href', href)
-  })
-  return tmp.innerHTML.trim()
-}
-
-function makeHtmlPasteHandler(value, onChange, name) {
-  return (e) => {
-    const html = e.clipboardData?.getData('text/html')
-    if (!html) return
-    const clean = cleanHtmlPaste(html)
-    if (!clean) return
-    e.preventDefault()
-    const el = e.target
-    const start = el.selectionStart ?? 0
-    const end = el.selectionEnd ?? (value || '').length
-    const next = (value || '').slice(0, start) + clean + (value || '').slice(end)
-    onChange({ target: { name, value: next } })
-  }
-}
 
 export function FormField({ label, name, type = 'text', value, onChange, placeholder, required, error, rows, accept, multiple, options }) {
   return (
@@ -40,12 +12,19 @@ export function FormField({ label, name, type = 'text', value, onChange, placeho
           {required && <span className="required">*</span>}
         </label>
       )}
-      {type === 'textarea' || type === 'markdown' ? (
+      {type === 'markdown' ? (
+        <SimpleRichArea
+          name={name}
+          value={value || ''}
+          onChange={onChange}
+          placeholder={placeholder}
+          rows={rows || 4}
+        />
+      ) : type === 'textarea' ? (
         <textarea
           name={name}
           value={value}
           onChange={onChange}
-          onPaste={type === 'markdown' ? makeHtmlPasteHandler(value, onChange, name) : undefined}
           placeholder={placeholder}
           required={required}
           rows={rows || 4}
