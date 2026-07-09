@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '../../../context/ThemeContext'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { API_BASE_URL } from '../../../services/apiService'
+import Prose from '../../../components/Prose'
 import './Certificates.css'
 
 function normalizeUrl(url) {
@@ -263,7 +264,7 @@ function CertCard({ cert, primary, accent, text }) {
         <div className="cert-card-body">
           <h3 className="cert-title" style={{ color: text }}>{cert.title}</h3>
           <p className="cert-issuer" style={{ color: primary }}>{cert.issuer}</p>
-          {cert.description && <p className="cert-desc" style={{ color: text }}>{cert.description}</p>}
+          {cert.description && <Prose className="cert-desc" style={{ color: text }}>{cert.description}</Prose>}
           <div className="cert-dates" style={{ color: text }}>
             <span>Issued {formatDate(cert.issue_date)}</span>
           </div>

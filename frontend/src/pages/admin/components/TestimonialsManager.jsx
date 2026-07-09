@@ -141,7 +141,7 @@ export default function TestimonialsManager() {
           />
           <FormField
             label="Quote"
-            type="textarea"
+            type="markdown"
             value={formData.quote}
             onChange={(e) => setFormData({ ...formData, quote: e.target.value })}
             required

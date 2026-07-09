@@ -286,7 +286,7 @@ export default function CertificatesManager() {
 
           <FormField
             label="Description (optional)"
-            type="textarea"
+            type="markdown"
             value={formData.description}
             onChange={e => set('description', e.target.value)}
           />
