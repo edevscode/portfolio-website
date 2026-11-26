@@ -15,8 +15,11 @@ __pycache__/
 *.pyd
 *.egg-info/
 .eggs/
+.env
 .env.local
 .env.production
+frontend/.env
+frontend/.env.local
 .venv/
 venv/
 ENV/
@@ -40,3 +43,11 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# SQL files
+*.sql
+
+# Local personal & scratch files
+colab-lp.html
+Eron_Dave_Geronimo_Resume.pdf
+photo_profile_2025-12-19_12-24-08.jpg

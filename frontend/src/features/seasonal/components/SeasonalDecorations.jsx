@@ -671,7 +671,7 @@ const AutumnDecorations = ({ colors }) => (
       
       {/* Pumpkin 2 */}
       <ellipse cx="60" cy="45" rx="12" ry="14" fill="url(#pumpkin-orange)" opacity="0.9" />
-      <path d="M55" y1="45" x2="62" y2="35" fill="#FF8C00" stroke="#FF6B00" strokeWidth="1" />
+      <path d="M55 45 Q58 37 60 33 Q62 37 65 45" fill="#FF8C00" stroke="#FF6B00" strokeWidth="1" />
       <rect x="57" y="32" width="5" height="3" fill="#228b22" rx="1" />
     </svg>
   </>

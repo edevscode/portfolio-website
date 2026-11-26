@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock } from 'lucide-react'
-import { useTheme } from '../../context/ThemeContext'
 import { apiService } from '../../services/apiService'
 import './AdminLogin.css'
 
@@ -11,7 +10,6 @@ export default function AdminLogin({ setIsAdmin }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { theme } = useTheme()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -54,13 +52,13 @@ export default function AdminLogin({ setIsAdmin }) {
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="username">Email</label>
             <input
-              type="text"
+              type="email"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="Enter your admin email"
               disabled={loading}
               required
             />

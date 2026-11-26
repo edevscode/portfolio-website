@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Routes, Route, useLocation, useNavigate, NavLink } from 'react-router-dom'
 import { Menu, X, LogOut, FileText, Briefcase, Users, Home, Mail, Palette, Award, Eye, Zap } from 'lucide-react'
+import { apiService } from '../../services/apiService'
 import './AdminDashboard.css'
 import DashboardHome from './components/DashboardHome'
 import ProjectsManager from './components/ProjectsManager'
@@ -17,8 +18,8 @@ export default function AdminDashboard({ setIsAdmin }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken')
+  const handleLogout = async () => {
+    await apiService.logout()
     setIsAdmin(false)
     navigate('/admin/login')
   }

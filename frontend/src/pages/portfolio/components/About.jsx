@@ -6,6 +6,15 @@ import ResumeViewer from './ResumeViewer'
 import Prose from '../../../components/Prose'
 import './About.css'
 
+function hasVisibleText(val) {
+  if (!val) return false
+  return String(val)
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .trim().length > 0
+}
+
 export default function About({ about }) {
   const { config: seasonConfig } = useSeasonContext()
   const { theme } = useTheme()
@@ -33,8 +42,11 @@ export default function About({ about }) {
     secondary:  seasonConfig?.colors?.secondary  || '#f1f5f9',
   }
 
-  const hasContent = about?.about_intro || about?.about_background
-    || about?.about_specialization || about?.about_text
+  const showIntro = hasVisibleText(about?.about_intro)
+  const showBackground = hasVisibleText(about?.about_background)
+  const showSpecialization = hasVisibleText(about?.about_specialization)
+  const showAboutText = hasVisibleText(about?.about_text)
+  const hasContent = showIntro || showBackground || showSpecialization || showAboutText || Boolean(resumeFileUrl)
 
   return (
     <section
@@ -61,13 +73,13 @@ export default function About({ about }) {
         {hasContent && (
           <div className="about-content">
 
-            {about?.about_intro && (
+            {showIntro && (
               <div className="about-intro-text">
                 <Prose style={{ color: colors.text }}>{about.about_intro}</Prose>
               </div>
             )}
 
-            {about?.about_background && (
+            {showBackground && (
               <div className="about-block">
                 <div className="about-block-label">Background</div>
                 <Prose style={{ color: colors.text }}>
@@ -76,7 +88,7 @@ export default function About({ about }) {
               </div>
             )}
 
-            {about?.about_specialization && (
+            {showSpecialization && (
               <div className="about-block">
                 <div className="about-block-label">Specialization</div>
                 <Prose style={{ color: colors.text }}>
@@ -85,7 +97,7 @@ export default function About({ about }) {
               </div>
             )}
 
-            {about?.about_text && (
+            {showAboutText && (
               <div className="about-block">
                 <Prose style={{ color: colors.text }}>
                   {about.about_text}
