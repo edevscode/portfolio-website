@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { apiService } from '../../../services/apiService'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
+import { safeHref } from '../../../utils/sanitize'
 import './Contact.css'
 
 function PlatformIcon({ platform, size = 18 }) {
@@ -139,10 +140,10 @@ export default function Contact({ about, socialLinks }) {
               <div className="contact-social">
                 <p className="contact-social-label">Find me on</p>
                 <div className="contact-social-links">
-                  {visibleLinks.map(link => (
+                  {visibleLinks.filter(link => safeHref(link.url)).map(link => (
                     <a
                       key={link.id}
-                      href={link.url}
+                      href={safeHref(link.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="contact-social-btn"
@@ -175,7 +176,7 @@ export default function Contact({ about, socialLinks }) {
                 </button>
               </div>
             ) : (
-              <form className="contact-form" onSubmit={handleSubmit} noValidate>
+              <form className="contact-form" onSubmit={handleSubmit}>
                 <div className="contact-form-row">
                   <div className="contact-field">
                     <label htmlFor="cf-name">Name</label>
@@ -186,6 +187,7 @@ export default function Contact({ about, socialLinks }) {
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="Your name"
+                      maxLength={200}
                       required
                     />
                   </div>
@@ -198,6 +200,7 @@ export default function Contact({ about, socialLinks }) {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="your@email.com"
+                      maxLength={254}
                       required
                     />
                   </div>
@@ -211,6 +214,7 @@ export default function Contact({ about, socialLinks }) {
                     value={formData.subject}
                     onChange={handleChange}
                     placeholder="What's this about?"
+                    maxLength={300}
                     required
                   />
                 </div>
@@ -223,6 +227,7 @@ export default function Contact({ about, socialLinks }) {
                     onChange={handleChange}
                     placeholder="Tell me about your project or question…"
                     rows={5}
+                    maxLength={5000}
                     required
                   />
                 </div>

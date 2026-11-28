@@ -4,6 +4,7 @@ import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { API_BASE_URL } from '../../../services/apiService'
 import { getReadableTextColor } from '../../../utils/color'
+import { safeHref } from '../../../utils/sanitize'
 import './Projects.css'
 
 function stripToPlainText(text) {
@@ -44,6 +45,9 @@ function ProjectCard({ project, colors, onNavigate }) {
   const isLocal = project.project_type === 'local'
   const desc = stripToPlainText(project.description)
   const thumbnailUrl = normalizeMediaUrl(project.thumbnail)
+
+  const liveUrl = safeHref(project.url)
+  const githubUrl = safeHref(project.github_url)
 
   const accentRgb = hexToRgbParts(colors.accent)
   const hoverShadow = hovered
@@ -109,11 +113,11 @@ function ProjectCard({ project, colors, onNavigate }) {
           <p className="pcard-desc" style={{ color: colors.text }}>{desc}</p>
         )}
 
-        {(project.url || project.github_url) && (
+        {(liveUrl || githubUrl) && (
           <div className="pcard-links">
-            {project.url && (
+            {liveUrl && (
               <a
-                href={project.url}
+                href={liveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="pcard-link pcard-link--primary"
@@ -128,9 +132,9 @@ function ProjectCard({ project, colors, onNavigate }) {
                 Live Site
               </a>
             )}
-            {project.github_url && (
+            {githubUrl && (
               <a
-                href={project.github_url}
+                href={githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="pcard-link pcard-link--github"

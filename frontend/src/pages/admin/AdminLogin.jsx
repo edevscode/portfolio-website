@@ -17,10 +17,7 @@ export default function AdminLogin({ setIsAdmin }) {
     setLoading(true)
 
     try {
-      const response = await apiService.login(username, password)
-
-      // Store token
-      localStorage.setItem('adminToken', response.data.token)
+      await apiService.login(username, password)
       setIsAdmin(true)
       navigate('/admin')
     } catch (err) {

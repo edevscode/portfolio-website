@@ -2,6 +2,7 @@ import React from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { getReadableTextColor } from '../../../utils/color'
+import { safeHref } from '../../../utils/sanitize'
 import './Footer.css'
 
 export default function Footer({ socialLinks }) {
@@ -34,8 +35,8 @@ export default function Footer({ socialLinks }) {
         <div className="footer-section">
           <h4 style={{ color: colors.secondary }}>Connect</h4>
           <div className="social-links">
-            {socialLinks && socialLinks.map((link) => (
-              <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={link.platform} style={{
+            {socialLinks && socialLinks.filter((link) => safeHref(link.url)).map((link) => (
+              <a key={link.id} href={safeHref(link.url)} target="_blank" rel="noopener noreferrer" title={link.platform} style={{
                 color: footerText,
                 borderColor: colors.accent
               }}>

@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { apiService } from '../services/apiService'
+import { safeHexColor, safeHref } from '../utils/sanitize'
+
+const ALLOWED_ANIMATIONS = new Set(['none', 'fade', 'slide', 'bounce', 'glow', 'float', 'pulse', 'gradient'])
+const ALLOWED_PARTICLES = new Set(['none', 'snow', 'leaves', 'stars'])
+const ALLOWED_CARD_STYLES = new Set(['flat', 'elevated', 'outlined'])
 
 const ThemeContext = createContext()
 
@@ -92,59 +97,80 @@ export default function ThemeProvider({ children }) {
 
   const applyTheme = (themeData) => {
     const root = document.documentElement
+    const primaryColor = safeHexColor(themeData.primary_color, '#000000')
+    const secondaryColor = safeHexColor(themeData.secondary_color, '#ffffff')
+    const accentColor = safeHexColor(themeData.accent_color, '#0066cc')
+    const bgColor = safeHexColor(themeData.background_color, '#f5f5f5')
+    const textColor = safeHexColor(themeData.text_color, '#333333')
+    const safeAnimType = ALLOWED_ANIMATIONS.has(themeData.animation_type) ? themeData.animation_type : 'none'
+    const safeParticleType = ALLOWED_PARTICLES.has(themeData.particle_type) ? themeData.particle_type : 'none'
+    const safeCardStyle = ALLOWED_CARD_STYLES.has(themeData.card_style) ? themeData.card_style : 'flat'
+    const safeTheme = {
+      ...themeData,
+      primary_color: primaryColor,
+      secondary_color: secondaryColor,
+      accent_color: accentColor,
+      background_color: bgColor,
+      text_color: textColor,
+      animation_type: safeAnimType,
+      particle_type: safeParticleType,
+      card_style: safeCardStyle,
+    }
     
     // Apply colors
-    root.style.setProperty('--primary-color', themeData.primary_color)
-    root.style.setProperty('--secondary-color', themeData.secondary_color)
-    root.style.setProperty('--accent-color', themeData.accent_color)
-    root.style.setProperty('--bg-color', themeData.background_color)
-    root.style.setProperty('--text-color', themeData.text_color)
+    root.style.setProperty('--primary-color', primaryColor)
+    root.style.setProperty('--secondary-color', secondaryColor)
+    root.style.setProperty('--accent-color', accentColor)
+    root.style.setProperty('--bg-color', bgColor)
+    root.style.setProperty('--text-color', textColor)
     
     // Apply visual effects
-    if (themeData.background_image) {
-      root.style.setProperty('--bg-image', `url(${themeData.background_image})`)
+    const safeBgImage = safeHref(themeData.background_image)
+    if (safeBgImage && /^https?:/i.test(safeBgImage)) {
+      root.style.setProperty('--bg-image', `url("${encodeURI(safeBgImage)}")`)
     } else {
       root.style.setProperty('--bg-image', 'none')
     }
     
     // Gradient effect
     if (themeData.gradient_enabled) {
-      const gradient = `linear-gradient(${themeData.gradient_angle}deg, ${themeData.primary_color}, ${themeData.secondary_color})`
+      const angle = Number.isFinite(Number(themeData.gradient_angle)) ? Number(themeData.gradient_angle) : 45
+      const gradient = `linear-gradient(${angle}deg, ${primaryColor}, ${secondaryColor})`
       root.style.setProperty('--bg-gradient', gradient)
     } else {
       root.style.setProperty('--bg-gradient', 'none')
     }
     
     // Shadow intensity (0-10 scale)
-    const shadowIntensity = (themeData.shadow_intensity || 0) / 10
+    const shadowIntensity = (Number(themeData.shadow_intensity) || 0) / 10
     const shadowColor = `rgba(0, 0, 0, ${shadowIntensity * 0.3})`
     root.style.setProperty('--shadow-color', shadowColor)
     root.style.setProperty('--shadow-blur', `${shadowIntensity * 20}px`)
     
     // Border radius effect
-    root.style.setProperty('--border-radius', `${themeData.border_radius || 0}px`)
+    root.style.setProperty('--border-radius', `${Number(themeData.border_radius) || 0}px`)
     
     // Blur effect
-    root.style.setProperty('--blur-effect', `blur(${themeData.blur_effect || 0}px)`)
+    root.style.setProperty('--blur-effect', `blur(${Number(themeData.blur_effect) || 0}px)`)
     
     // Animation properties
-    root.style.setProperty('--animation-type', themeData.animation_type || 'none')
-    root.style.setProperty('--animation-duration', `${themeData.animation_duration || 1}s`)
-    root.style.setProperty('--animation-delay', `${themeData.animation_delay || 0}s`)
+    root.style.setProperty('--animation-type', safeAnimType)
+    root.style.setProperty('--animation-duration', `${Number(themeData.animation_duration) || 1}s`)
+    root.style.setProperty('--animation-delay', `${Number(themeData.animation_delay) || 0}s`)
     
     // Hover effects
     root.style.setProperty('--use-hover-effects', themeData.use_hover_effects ? '1' : '0')
     
     // Card style
-    root.style.setProperty('--card-style', themeData.card_style || 'flat')
+    root.style.setProperty('--card-style', safeCardStyle)
     
     // Particles
-    root.style.setProperty('--particle-type', themeData.particle_type || 'none')
+    root.style.setProperty('--particle-type', safeParticleType)
     root.style.setProperty('--use-particles', themeData.use_particles ? '1' : '0')
     
     // Apply theme-specific animations/styles
-    applyThemeAnimations(themeData)
-    applyParticleEffects(themeData)
+    applyThemeAnimations(safeTheme)
+    applyParticleEffects(safeTheme)
   }
 
   const applyThemeAnimations = (themeData) => {
@@ -268,103 +294,97 @@ export default function ThemeProvider({ children }) {
   }
 
   const applyParticleEffects = (themeData) => {
-    if (!themeData.use_particles) {
+    if (!themeData.use_particles || !ALLOWED_PARTICLES.has(themeData.particle_type) || themeData.particle_type === 'none') {
       removeParticles()
       return
     }
 
-    const particleContainer = document.getElementById('theme-particles')
-    if (!particleContainer) {
-      const container = document.createElement('div')
+    let container = document.getElementById('theme-particles')
+    if (!container) {
+      container = document.createElement('div')
       container.id = 'theme-particles'
-      container.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        overflow: hidden;
-        z-index: 1;
-      `
+      container.style.position = 'fixed'
+      container.style.top = '0'
+      container.style.left = '0'
+      container.style.width = '100%'
+      container.style.height = '100%'
+      container.style.pointerEvents = 'none'
+      container.style.overflow = 'hidden'
+      container.style.zIndex = '1'
       document.body.insertBefore(container, document.body.firstChild)
     }
 
-    const container = document.getElementById('theme-particles')
-    container.innerHTML = '' // Clear existing particles
+    container.replaceChildren()
 
     const particleType = themeData.particle_type
-    const particleColor = themeData.primary_color
+    const particleColor = safeHexColor(themeData.primary_color, '#000000')
     const particleCount = 30
+    const cssRules = []
 
     for (let i = 0; i < particleCount; i++) {
-      createParticle(container, particleType, particleColor, i)
+      const rule = createParticle(container, particleType, particleColor, i)
+      if (rule) cssRules.push(rule)
     }
+
+    let styleTag = document.getElementById('theme-particle-styles')
+    if (!styleTag) {
+      styleTag = document.createElement('style')
+      styleTag.id = 'theme-particle-styles'
+      document.head.appendChild(styleTag)
+    }
+    styleTag.textContent = cssRules.join('\n')
   }
 
   const createParticle = (container, type, color, index) => {
     const particle = document.createElement('div')
-    particle.style.cssText = `
-      position: absolute;
-      pointer-events: none;
-    `
+    particle.style.position = 'absolute'
+    particle.style.pointerEvents = 'none'
 
     const size = Math.random() * 4 + 2
     const left = Math.random() * 100
     const duration = Math.random() * 10 + 10
 
-    particle.innerHTML = `
-      <div style="
-        width: ${size}px;
-        height: ${size}px;
-        background: ${color};
-        border-radius: 50%;
-        opacity: 0.6;
-        animation: particle-${type}-${index} ${duration}s linear infinite;
-      "></div>
-    `
-
-    // Add animation styles
-    const animationStyle = document.createElement('style')
-    if (type === 'snow') {
-      animationStyle.textContent = `
-        @keyframes particle-${type}-${index} {
-          0% { top: -10px; left: ${left}%; opacity: 0; }
-          10% { opacity: 0.8; }
-          90% { opacity: 0.8; }
-          100% { top: 100vh; left: calc(${left}% + ${(Math.random() - 0.5) * 50}px); opacity: 0; }
-        }
-      `
-    } else if (type === 'leaves') {
-      animationStyle.textContent = `
-        @keyframes particle-${type}-${index} {
-          0% { top: -10px; left: ${left}%; transform: rotate(0deg); opacity: 0; }
-          10% { opacity: 0.8; }
-          90% { opacity: 0.8; }
-          100% { top: 100vh; left: calc(${left}% + ${(Math.random() - 0.5) * 100}px); transform: rotate(360deg); opacity: 0; }
-        }
-      `
-    } else if (type === 'stars') {
-      animationStyle.textContent = `
-        @keyframes particle-${type}-${index} {
-          0% { opacity: 0; }
-          50% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-      `
-    }
-
-    if (animationStyle.textContent) {
-      document.head.appendChild(animationStyle)
-    }
+    const dot = document.createElement('div')
+    dot.style.width = `${size}px`
+    dot.style.height = `${size}px`
+    dot.style.background = color
+    dot.style.borderRadius = '50%'
+    dot.style.opacity = '0.6'
+    dot.style.animation = `particle-${type}-${index} ${duration}s linear infinite`
+    particle.appendChild(dot)
     container.appendChild(particle)
+
+    if (type === 'snow') {
+      return `@keyframes particle-${type}-${index} {
+        0% { top: -10px; left: ${left}%; opacity: 0; }
+        10% { opacity: 0.8; }
+        90% { opacity: 0.8; }
+        100% { top: 100vh; left: calc(${left}% + ${(Math.random() - 0.5) * 50}px); opacity: 0; }
+      }`
+    }
+    if (type === 'leaves') {
+      return `@keyframes particle-${type}-${index} {
+        0% { top: -10px; left: ${left}%; transform: rotate(0deg); opacity: 0; }
+        10% { opacity: 0.8; }
+        90% { opacity: 0.8; }
+        100% { top: 100vh; left: calc(${left}% + ${(Math.random() - 0.5) * 100}px); transform: rotate(360deg); opacity: 0; }
+      }`
+    }
+    if (type === 'stars') {
+      return `@keyframes particle-${type}-${index} {
+        0% { opacity: 0; }
+        50% { opacity: 1; }
+        100% { opacity: 0; }
+      }`
+    }
+    return ''
   }
 
   const removeParticles = () => {
     const container = document.getElementById('theme-particles')
-    if (container) {
-      container.remove()
-    }
+    if (container) container.remove()
+    const styleTag = document.getElementById('theme-particle-styles')
+    if (styleTag) styleTag.remove()
   }
 
   const value = {

@@ -2,6 +2,7 @@ import React from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { API_BASE_URL } from '../../../services/apiService'
+import { safeHref } from '../../../utils/sanitize'
 import './Hero.css'
 
 export default function Hero({ about }) {
@@ -32,11 +33,11 @@ export default function Hero({ about }) {
 
   const primaryCta = {
     text: about?.hero_cta_primary_text   || 'View My Work',
-    href: about?.hero_cta_primary_link   || '#projects',
+    href: safeHref(about?.hero_cta_primary_link, '#projects'),
   }
   const secondaryCta = {
     text: about?.hero_cta_secondary_text || 'Get In Touch',
-    href: about?.hero_cta_secondary_link || '#contact',
+    href: safeHref(about?.hero_cta_secondary_link, '#contact'),
   }
 
   return (

@@ -3,6 +3,7 @@ import { useTheme } from '../../../context/ThemeContext'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { API_BASE_URL } from '../../../services/apiService'
 import Prose from '../../../components/Prose'
+import { safeHref } from '../../../utils/sanitize'
 import './Certificates.css'
 
 function normalizeUrl(url) {
@@ -325,9 +326,9 @@ function CertCard({ cert, primary, accent, text }) {
                 </button>
               )
             })}
-            {cert.credential_url && (
+            {safeHref(cert.credential_url) && (
               <a
-                href={cert.credential_url}
+                href={safeHref(cert.credential_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="cert-verify-btn"

@@ -494,7 +494,6 @@ export const apiService = {
   },
 
   logout: async () => {
-    localStorage.removeItem('adminToken')
     await supabase.auth.signOut()
   },
 
@@ -1274,6 +1273,17 @@ export const apiService = {
     }
     if (!payload.name || !payload.email || !payload.subject || !payload.message) {
       throwApiError({ message: 'All fields are required.', status: 400 }, 400)
+    }
+    if (
+      payload.name.length > 200 ||
+      payload.email.length > 254 ||
+      payload.subject.length > 300 ||
+      payload.message.length > 5000
+    ) {
+      throwApiError({ message: 'One or more fields exceed the allowed length.', status: 400 }, 400)
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      throwApiError({ message: 'Please enter a valid email address.', status: 400 }, 400)
     }
 
     // Do NOT chain .select() — anon role only has INSERT permission on contacts
