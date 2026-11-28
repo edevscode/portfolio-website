@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
-import { Plus, Info, Check } from 'lucide-react'
+import React, { useState, useEffect, useId, useMemo, useRef } from 'react'
+import { Plus, Info, Check, Palette, ChevronDown, Search, X } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import { cache, CACHE_KEYS } from '../../../services/cache'
-import { FormField, ModalForm } from './Form'
+import { getContrastRatio, resolveThemeTokens } from '../../../utils/color'
+import { AdminToast, FormField, ModalForm } from './Form'
 import './Manager.css'
 import './Themes.css'
 
@@ -165,17 +166,61 @@ const PRESET_THEMES = [
   },
 ]
 
-// Live theme preview inside the edit form
+// Live mini-portfolio preview inside the edit form
 function ThemePreview({ f }) {
+  const t = resolveThemeTokens(f)
+  const rawRatio = getContrastRatio(f.text_color, f.background_color)
+  const nativePass = rawRatio !== null && rawRatio >= 4.5
+
   return (
-    <div className="theme-preview" style={{ backgroundColor: f.background_color }}>
-      <div className="theme-preview-label">Live Preview</div>
-      <div className="theme-preview-card" style={{ backgroundColor: f.secondary_color }}>
-        <h4 style={{ color: f.primary_color }}>Heading Text</h4>
-        <p style={{ color: f.text_color }}>Body text looks like this in your theme.</p>
-        <span className="theme-preview-accent" style={{ background: f.accent_color, color: f.secondary_color }}>
-          Accent
+    <div
+      className="theme-preview"
+      style={{ backgroundColor: t.bg, borderColor: t.border }}
+    >
+      <div className="theme-preview-topbar" style={{ borderBottomColor: t.border }}>
+        <div className="theme-preview-brand">
+          <span className="theme-preview-dot" style={{ background: t.accent }} />
+          <span className="theme-preview-label" style={{ color: t.textMuted }}>
+            Mini Portfolio Preview
+          </span>
+        </div>
+        <span
+          className={`theme-wcag-pill${nativePass ? ' theme-wcag-pill--pass' : ' theme-wcag-pill--auto'}`}
+          title={
+            nativePass
+              ? `Raw text/background contrast ratio is ${rawRatio.toFixed(1)}:1 (meets WCAG AA)`
+              : 'Raw text/background contrast is below 4.5:1; semantic tokens auto-adjust viewer readability'
+          }
+        >
+          {nativePass ? `WCAG AA ${rawRatio.toFixed(1)}:1` : 'Auto-adjusted AA'}
         </span>
+      </div>
+
+      <div className="theme-preview-hero">
+        <div className="theme-preview-hero-title" style={{ color: t.heading }}>
+          {f.name?.trim() || 'Portfolio Heading'}
+        </div>
+        <div className="theme-preview-hero-ctas">
+          <span className="theme-preview-accent" style={{ background: t.accent, color: t.onAccent }}>
+            View Work
+          </span>
+          <span
+            className="theme-preview-ghost"
+            style={{ color: t.heading, borderColor: t.borderStrong }}
+          >
+            Contact
+          </span>
+        </div>
+      </div>
+
+      <div
+        className="theme-preview-card"
+        style={{ backgroundColor: t.surface, borderColor: t.surfaceBorder }}
+      >
+        <h4 style={{ color: t.headingOnSurface }}>Featured Project</h4>
+        <p style={{ color: t.surfaceText }}>
+          Surface card contrast and body copy preview for your portfolio sections.
+        </p>
       </div>
     </div>
   )
@@ -183,30 +228,44 @@ function ThemePreview({ f }) {
 
 // Range input that shows its current value inline
 function RangeField({ label, value, onChange, min = 0, max = 10, step = 1, unit = '' }) {
+  const id = useId()
   return (
     <div className="range-field">
       <div className="range-field__header">
-        <span className="range-field__label">{label}</span>
+        <label htmlFor={id} className="range-field__label">{label}</label>
         <span className="range-field__value">{value}{unit}</span>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={onChange} />
+      <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={onChange} />
     </div>
   )
 }
 
 const SEASON_LABEL = Object.fromEntries(SEASON_OPTIONS.map(o => [o.value, o.label]))
+const SEASON_SELECT_OPTIONS = [{ value: '', label: '— Select —' }, ...SEASON_OPTIONS]
+
+const COLOR_FIELDS = [
+  ['Primary', 'primary_color'],
+  ['Secondary', 'secondary_color'],
+  ['Accent', 'accent_color'],
+  ['Background', 'background_color'],
+  ['Text', 'text_color'],
+]
 
 export default function ThemesManager() {
   const [themes, setThemes] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [activeMode, setActiveMode] = useState('auto')
   const [showInfo, setShowInfo] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState(null)
   const [applyingTheme, setApplyingTheme] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [search, setSearch] = useState('')
   const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+  const presetTitleId = useId()
   const [formData, setFormData] = useState({
     season: '',
     name: '',
@@ -217,15 +276,36 @@ export default function ThemesManager() {
     text_color: '#333333',
   })
 
-  useEffect(() => { loadThemes() }, [])
+  useEffect(() => {
+    loadThemes()
+    return () => clearTimeout(toastTimer.current)
+  }, [])
+
+  useEffect(() => {
+    if (!selectedPreset) return undefined
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !applyingTheme) {
+        setSelectedPreset(null)
+      }
+    }
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [selectedPreset, applyingTheme])
 
   const showToast = (message, type = 'success') => {
+    clearTimeout(toastTimer.current)
     setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
+    toastTimer.current = setTimeout(() => setToast(null), 3200)
   }
 
   const invalidatePortfolioCache = () => {
     cache.invalidate(CACHE_KEYS.portfolio)
+    window.dispatchEvent(new CustomEvent('admin:meta-updated'))
   }
 
   const loadThemes = async () => {
@@ -354,10 +434,12 @@ export default function ThemesManager() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (submitting) return
     if (!formData.season || !formData.name) {
       showToast('Please fill in all required fields', 'error')
       return
     }
+    setSubmitting(true)
     try {
       if (editingId) {
         await apiService.updateTheme(editingId, formData)
@@ -371,41 +453,49 @@ export default function ThemesManager() {
       loadThemes()
     } catch (error) {
       showToast('Failed to save theme: ' + (error.response?.data?.detail || error.message), 'error')
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const getSeasonLabel = (season) => SEASON_LABEL[season] || season
   const activeTheme = themes.find(t => t.is_active)
+  const presetTokens = selectedPreset ? resolveThemeTokens(selectedPreset) : null
 
-  const selectField = (label, value, onChange, options, required = false) => (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ display: 'block', marginBottom: 5, fontWeight: 600, fontSize: 14, color: '#374151' }}>
-        {label}{required && <span style={{ color: '#dc2626', marginLeft: 3 }}>*</span>}
-      </label>
-      <select
-        value={value}
-        onChange={onChange}
-        required={required}
-        style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontFamily: 'inherit', fontSize: 14, color: '#1f2937', background: 'white' }}
-      >
-        {required && <option value="">— Select —</option>}
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </div>
-  )
+  const filteredThemes = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return themes
+    return themes.filter(
+      (t) =>
+        (t.name || '').toLowerCase().includes(q) ||
+        (SEASON_LABEL[t.season] || t.season || '').toLowerCase().includes(q)
+    )
+  }, [themes, search])
 
   return (
     <div className="manager">
       {/* Header */}
       <div className="manager-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <h2>Themes</h2>
-          <button className="btn-icon" onClick={() => setShowInfo(!showInfo)} title="How seasonal themes work">
-            <Info size={16} />
+        <div className="manager-header-left">
+          <Palette size={17} className="manager-header-icon" />
+          <h2>Saved Themes</h2>
+          {!loading && themes.length > 0 && (
+            <span className="count-badge">{themes.length}</span>
+          )}
+          <button
+            type="button"
+            className={`themes-info-btn${showInfo ? ' active' : ''}`}
+            onClick={() => setShowInfo(!showInfo)}
+            title="How seasonal themes work"
+            aria-label="How seasonal themes work"
+            aria-expanded={showInfo}
+          >
+            <Info size={15} />
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="manager-header-actions">
           <button
+            type="button"
             className={activeMode === 'auto' ? 'btn-primary' : 'btn-secondary'}
             onClick={handleSetAuto}
             title="Enable automatic seasonal theme switching"
@@ -413,13 +503,13 @@ export default function ThemesManager() {
             {activeMode === 'auto' && <Check size={15} />}
             {activeMode === 'auto' ? 'Auto Mode' : 'Use Auto Mode'}
           </button>
-          <button className="btn-primary" onClick={handleAdd}>
+          <button type="button" className="btn-primary" onClick={handleAdd}>
             <Plus size={16} /> Add Theme
           </button>
         </div>
       </div>
 
-      <div style={{ padding: '0 20px 20px' }}>
+      <div className="themes-top-section">
         {/* Info panel */}
         {showInfo && (
           <div className="info-panel">
@@ -434,7 +524,7 @@ export default function ThemesManager() {
 
         {/* Mode banner */}
         <div className={`mode-banner mode-banner--${activeMode}`}>
-          <span className="mode-banner__dot" />
+          <span className="mode-banner__dot" aria-hidden="true" />
           <span className="mode-banner__text">
             {activeMode === 'auto'
               ? 'Auto Mode — theme changes automatically with the season'
@@ -448,31 +538,67 @@ export default function ThemesManager() {
         <div className="preset-section">
           <h3>Quick Templates</h3>
           <div className="preset-grid">
-            {PRESET_THEMES.map((preset, i) => (
-              <button
-                key={i}
-                className="preset-btn"
-                onClick={() => setSelectedPreset(preset)}
-                title={`Apply ${preset.name}`}
-                style={{
-                  background: preset.background_color,
-                  color: preset.text_color,
-                  borderColor: preset.primary_color + '55',
-                }}
-              >
-                <span className="preset-btn__name">{preset.name}</span>
-                <div className="preset-btn__dots">
-                  <span className="preset-btn__dot" style={{ background: preset.primary_color }} />
-                  <span className="preset-btn__dot" style={{ background: preset.accent_color }} />
-                  <span className="preset-btn__dot" style={{ background: preset.secondary_color }} />
-                </div>
-              </button>
-            ))}
+            {PRESET_THEMES.map((preset, i) => {
+              const pt = resolveThemeTokens(preset)
+              return (
+                <button
+                  type="button"
+                  key={i}
+                  className="preset-btn"
+                  onClick={() => setSelectedPreset(preset)}
+                  title={`Preview and apply ${preset.name}`}
+                  style={{
+                    background: pt.bg,
+                    color: pt.text,
+                    borderColor: pt.borderStrong,
+                  }}
+                >
+                  <span className="preset-btn__name">{preset.name}</span>
+                  <div className="preset-btn__dots">
+                    <span className="preset-btn__dot" style={{ background: preset.primary_color }} />
+                    <span className="preset-btn__dot" style={{ background: preset.accent_color }} />
+                    <span className="preset-btn__dot" style={{ background: preset.secondary_color }} />
+                  </div>
+                </button>
+              )
+            })}
           </div>
-          <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
-            Click a template to preview and apply it.
+          <p className="preset-section__hint">
+            Click a template to preview, customize, or apply it directly.
           </p>
         </div>
+
+        {/* Saved theme search bar when list has > 4 themes */}
+        {!loading && themes.length > 4 && (
+          <div className="themes-search-bar">
+            <div className="manager-search">
+              <Search size={14} className="manager-search__icon" aria-hidden="true" />
+              <input
+                type="search"
+                className="manager-search__input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search saved themes…"
+                aria-label="Search saved themes"
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="manager-search__clear"
+                  onClick={() => setSearch('')}
+                  aria-label="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            {search.trim() && (
+              <span className="manager-result-meta">
+                {filteredThemes.length} of {themes.length}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Theme Cards */}
@@ -480,12 +606,12 @@ export default function ThemesManager() {
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="theme-skeleton">
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div className="theme-skeleton__head">
                   <div className="skeleton-line" style={{ height: 17, width: '55%' }} />
                   <div className="skeleton-line" style={{ height: 17, width: '25%' }} />
                 </div>
                 <div className="skeleton-line" style={{ height: 11, width: '35%', marginBottom: 14 }} />
-                <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
+                <div className="theme-skeleton__swatches">
                   {[0,1,2,3,4].map(j => (
                     <div key={j} className="skeleton-line" style={{ width: 26, height: 26, borderRadius: 6 }} />
                   ))}
@@ -493,136 +619,217 @@ export default function ThemesManager() {
                 <div className="skeleton-line" style={{ height: 33, borderRadius: 8 }} />
               </div>
             ))
-          : themes.map((theme) => (
-              <div
-                key={theme.id}
-                className={`theme-card${theme.is_active ? ' theme-card--active' : ''}`}
-                style={{
-                  background: theme.background_color,
-                  color: theme.text_color,
-                  borderColor: theme.is_active ? theme.accent_color : undefined,
-                }}
-              >
-                {/* Name + Active badge */}
-                <div className="theme-card__header">
-                  <h3 className="theme-card__name" style={{ color: theme.primary_color }}>
-                    {theme.name}
-                  </h3>
-                  {theme.is_active && (
-                    <span className="theme-card__active-badge">
-                      <Check size={9} /> Active
-                    </span>
-                  )}
-                </div>
-
-                <p className="theme-card__season">{getSeasonLabel(theme.season)}</p>
-
-                {/* All 5 colors */}
-                <div className="theme-card__colors">
-                  {[
-                    [theme.primary_color, 'Primary'],
-                    [theme.secondary_color, 'Secondary'],
-                    [theme.accent_color, 'Accent'],
-                    [theme.background_color, 'Background'],
-                    [theme.text_color, 'Text'],
-                  ].map(([color, label]) => (
-                    <div key={label} className="color-swatch" style={{ background: color }} title={label} />
-                  ))}
-                </div>
-
-                {/* Feature badges */}
-                <div className="theme-card__badges">
-                  {theme.gradient_enabled && (
-                    <span className="theme-card__badge" style={{ background: `${theme.accent_color}22`, color: theme.primary_color }}>
-                      Gradient
-                    </span>
-                  )}
-                  {theme.use_particles && theme.particle_type !== 'none' && (
-                    <span className="theme-card__badge" style={{ background: `${theme.accent_color}22`, color: theme.primary_color }}>
-                      {PARTICLE_OPTIONS.find(p => p.value === theme.particle_type)?.label || 'Particles'}
-                    </span>
-                  )}
-                  {theme.animation_type && theme.animation_type !== 'none' && (
-                    <span className="theme-card__badge" style={{ background: `${theme.accent_color}22`, color: theme.primary_color }}>
-                      {ANIMATION_OPTIONS.find(a => a.value === theme.animation_type)?.label || 'Animation'}
-                    </span>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="theme-card__actions">
-                  <button
-                    onClick={() => handleEdit(theme)}
-                    style={{ color: theme.primary_color, background: `${theme.primary_color}18` }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleActivate(theme.id)}
-                    disabled={theme.is_active}
-                    style={{
-                      color: theme.is_active ? theme.text_color : theme.accent_color,
-                      background: `${theme.accent_color}20`,
-                    }}
-                  >
-                    {theme.is_active ? 'Active' : 'Activate'}
-                  </button>
-                  <button
-                    onClick={() => setDeletingId(deletingId === theme.id ? null : theme.id)}
-                    style={{ color: '#b91c1c', background: 'rgba(220,38,38,0.08)' }}
-                  >
-                    Delete
-                  </button>
-                </div>
-
-                {/* Inline delete confirm */}
-                {deletingId === theme.id && (
-                  <div className="theme-card__confirm">
-                    <span>Delete this theme?</span>
-                    <button className="theme-card__confirm-no" onClick={() => setDeletingId(null)}>No</button>
-                    <button className="theme-card__confirm-yes" onClick={() => handleDelete(theme.id)}>Yes</button>
+          : filteredThemes.map((theme) => {
+              const t = resolveThemeTokens(theme)
+              return (
+                <div
+                  key={theme.id}
+                  className={`theme-card${theme.is_active ? ' theme-card--active' : ''}`}
+                  style={{
+                    background: t.bg,
+                    color: t.text,
+                    borderColor: theme.is_active ? t.accent : t.borderStrong,
+                  }}
+                >
+                  {/* Name + Active badge */}
+                  <div className="theme-card__header">
+                    <h3 className="theme-card__name" style={{ color: t.heading }}>
+                      {theme.name}
+                    </h3>
+                    {theme.is_active && (
+                      <span
+                        className="theme-card__active-badge"
+                        style={{
+                          background: t.isDarkBg ? 'rgba(34, 197, 94, 0.22)' : 'rgba(22, 163, 74, 0.14)',
+                          color: t.isDarkBg ? '#86efac' : '#15803d',
+                        }}
+                      >
+                        <Check size={10} /> Active
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+
+                  <p className="theme-card__season" style={{ color: t.textMuted }}>
+                    {getSeasonLabel(theme.season)}
+                  </p>
+
+                  {/* All 5 raw colors */}
+                  <div className="theme-card__colors">
+                    {[
+                      [theme.primary_color, 'Primary'],
+                      [theme.secondary_color, 'Secondary'],
+                      [theme.accent_color, 'Accent'],
+                      [theme.background_color, 'Background'],
+                      [theme.text_color, 'Text'],
+                    ].map(([color, label]) => (
+                      <div
+                        key={label}
+                        className="color-swatch"
+                        style={{ background: color }}
+                        title={`${label}: ${color}`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Feature badges */}
+                  <div className="theme-card__badges">
+                    {theme.gradient_enabled && (
+                      <span
+                        className="theme-card__badge"
+                        style={{ background: t.tint, color: t.text, borderColor: t.border }}
+                      >
+                        Gradient
+                      </span>
+                    )}
+                    {theme.use_particles && theme.particle_type !== 'none' && (
+                      <span
+                        className="theme-card__badge"
+                        style={{ background: t.tint, color: t.text, borderColor: t.border }}
+                      >
+                        {PARTICLE_OPTIONS.find(p => p.value === theme.particle_type)?.label || 'Particles'}
+                      </span>
+                    )}
+                    {theme.animation_type && theme.animation_type !== 'none' && (
+                      <span
+                        className="theme-card__badge"
+                        style={{ background: t.tint, color: t.text, borderColor: t.border }}
+                      >
+                        {ANIMATION_OPTIONS.find(a => a.value === theme.animation_type)?.label || 'Animation'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="theme-card__actions">
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(theme)}
+                      style={{ color: t.heading, background: t.tint, borderColor: t.border }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleActivate(theme.id)}
+                      disabled={theme.is_active}
+                      style={
+                        theme.is_active
+                          ? { color: t.textMuted, background: t.tint, borderColor: t.border }
+                          : { color: t.onAccent, background: t.accent, borderColor: t.accent }
+                      }
+                    >
+                      {theme.is_active ? 'Active' : 'Activate'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingId(deletingId === theme.id ? null : theme.id)}
+                      style={{
+                        color: t.isDarkBg ? '#fca5a5' : '#b91c1c',
+                        background: t.isDarkBg ? 'rgba(239, 68, 68, 0.18)' : 'rgba(220, 38, 38, 0.08)',
+                        borderColor: t.isDarkBg ? 'rgba(248, 113, 113, 0.3)' : 'rgba(220, 38, 38, 0.16)',
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  {/* Inline delete confirm */}
+                  {deletingId === theme.id && (
+                    <div
+                      className="theme-card__confirm"
+                      style={{
+                        background: t.isDarkBg ? 'rgba(239, 68, 68, 0.16)' : 'rgba(220, 38, 38, 0.06)',
+                        borderColor: t.isDarkBg ? 'rgba(248, 113, 113, 0.35)' : 'rgba(220, 38, 38, 0.2)',
+                      }}
+                    >
+                      <span style={{ color: t.isDarkBg ? '#fecaca' : '#991b1b' }}>
+                        Delete this theme?
+                      </span>
+                      <button
+                        type="button"
+                        className="theme-card__confirm-no"
+                        style={{
+                          background: t.tint,
+                          color: t.text,
+                        }}
+                        onClick={() => setDeletingId(null)}
+                      >
+                        No
+                      </button>
+                      <button
+                        type="button"
+                        className="theme-card__confirm-yes"
+                        onClick={() => handleDelete(theme.id)}
+                      >
+                        Yes
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
       </div>
+
+      {!loading && themes.length > 0 && filteredThemes.length === 0 && (
+        <div className="themes-empty">
+          <p>No saved themes match &ldquo;{search}&rdquo;.</p>
+          <button type="button" className="btn-secondary" onClick={() => setSearch('')}>
+            Clear Search
+          </button>
+        </div>
+      )}
 
       {!loading && themes.length === 0 && (
         <div className="themes-empty">
           <p>No themes yet. Use a Quick Template above or create a custom theme.</p>
-          <button className="btn-primary" onClick={handleAdd}>
+          <button type="button" className="btn-primary" onClick={handleAdd}>
             <Plus size={15} /> Create First Theme
           </button>
         </div>
       )}
 
       {/* Preset Modal */}
-      {selectedPreset && (
-        <div className="preset-modal-overlay" onClick={() => setSelectedPreset(null)}>
-          <div className="preset-modal" onClick={e => e.stopPropagation()}>
-            <h2>Apply "{selectedPreset.name}"</h2>
+      {selectedPreset && presetTokens && (
+        <div
+          className="preset-modal-overlay"
+          onClick={() => { if (!applyingTheme) setSelectedPreset(null) }}
+        >
+          <div
+            className="preset-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={presetTitleId}
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 id={presetTitleId}>Apply &ldquo;{selectedPreset.name}&rdquo;</h2>
             <p>Choose how to apply this template to your portfolio.</p>
 
             <div
               className="preset-modal-preview"
               style={{
-                background: selectedPreset.background_color,
-                color: selectedPreset.text_color,
-                borderLeftColor: selectedPreset.primary_color,
+                background: presetTokens.bg,
+                color: presetTokens.text,
+                borderLeftColor: presetTokens.accent,
+                borderColor: presetTokens.border,
               }}
             >
               <div className="preset-modal-preview__colors">
                 {[
-                  selectedPreset.primary_color,
-                  selectedPreset.secondary_color,
-                  selectedPreset.accent_color,
-                  selectedPreset.background_color,
-                  selectedPreset.text_color,
-                ].map((c, i) => (
-                  <div key={i} className="preset-modal-preview__swatch" style={{ background: c }} />
+                  [selectedPreset.primary_color, 'Primary'],
+                  [selectedPreset.secondary_color, 'Secondary'],
+                  [selectedPreset.accent_color, 'Accent'],
+                  [selectedPreset.background_color, 'Background'],
+                  [selectedPreset.text_color, 'Text'],
+                ].map(([c, label]) => (
+                  <div
+                    key={label}
+                    className="preset-modal-preview__swatch"
+                    style={{ background: c }}
+                    title={`${label}: ${c}`}
+                  />
                 ))}
               </div>
-              <div className="preset-modal-preview__meta">
+              <div className="preset-modal-preview__meta" style={{ color: presetTokens.textMuted }}>
                 <strong>Season:</strong> {getSeasonLabel(selectedPreset.season)}
                 {selectedPreset.animation_type !== 'none' && (
                   <>&nbsp;&nbsp;<strong>Animation:</strong> {ANIMATION_OPTIONS.find(a => a.value === selectedPreset.animation_type)?.label}</>
@@ -634,20 +841,36 @@ export default function ThemesManager() {
             </div>
 
             <div className="preset-modal-actions">
-              <button className="btn-cancel" onClick={() => setSelectedPreset(null)} disabled={applyingTheme}>
+              <button
+                type="button"
+                className="btn-cancel"
+                onClick={() => setSelectedPreset(null)}
+                disabled={applyingTheme}
+              >
                 Cancel
               </button>
               <button
+                type="button"
                 className="btn-customize"
                 onClick={() => { handleApplyPreset(selectedPreset); setSelectedPreset(null) }}
                 disabled={applyingTheme}
               >
                 Customize
               </button>
-              <button className="btn-create" onClick={() => handleApplyPresetDirect(false)} disabled={applyingTheme}>
+              <button
+                type="button"
+                className="btn-create"
+                onClick={() => handleApplyPresetDirect(false)}
+                disabled={applyingTheme}
+              >
                 {applyingTheme ? 'Creating…' : 'Create'}
               </button>
-              <button className="btn-activate" onClick={() => handleApplyPresetDirect(true)} disabled={applyingTheme}>
+              <button
+                type="button"
+                className="btn-activate"
+                onClick={() => handleApplyPresetDirect(true)}
+                disabled={applyingTheme}
+              >
                 {applyingTheme ? 'Applying…' : 'Create & Activate'}
               </button>
             </div>
@@ -661,157 +884,198 @@ export default function ThemesManager() {
           title={editingId ? 'Edit Theme' : 'Add Theme'}
           onSubmit={handleSubmit}
           onClose={() => setShowForm(false)}
+          submitting={submitting}
         >
-          <div style={{ maxHeight: 580, overflowY: 'auto', paddingRight: 2 }}>
+          <div className="themes-form-scroll">
             {/* Live preview */}
             <ThemePreview f={formData} />
 
-            <p style={{ fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', margin: '0 0 12px 0' }}>
-              Basic
-            </p>
+            <div className="form-section themes-form-section--first">
+              <span className="form-section__label">Basic</span>
+            </div>
 
-            <FormField
-              label="Theme Name"
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., Winter Frost, Summer Vibes"
-              required
-            />
-
-            {selectField('Season', formData.season, e => setFormData({ ...formData, season: e.target.value }), SEASON_OPTIONS, true)}
-
-            <p style={{ fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', margin: '16px 0 12px 0' }}>
-              Colors
-            </p>
-
-            {[
-              ['Primary Color', 'primary_color'],
-              ['Secondary Color', 'secondary_color'],
-              ['Accent Color', 'accent_color'],
-              ['Background Color', 'background_color'],
-              ['Text Color', 'text_color'],
-            ].map(([label, key]) => (
+            <div className="form-grid-2">
               <FormField
-                key={key}
-                label={label}
-                type="color"
-                value={formData[key]}
-                onChange={e => setFormData({ ...formData, [key]: e.target.value })}
+                label="Theme Name"
+                name="theme-name"
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Winter Frost, Summer Vibes"
+                required
               />
-            ))}
+              <FormField
+                label="Season"
+                name="theme-season"
+                type="select"
+                value={formData.season}
+                onChange={e => setFormData({ ...formData, season: e.target.value })}
+                options={SEASON_SELECT_OPTIONS}
+                required
+              />
+            </div>
 
-            <p style={{ fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', margin: '16px 0 12px 0' }}>
-              Visual Effects
-            </p>
+            <div className="form-section">
+              <span className="form-section__label">Colors</span>
+            </div>
 
-            <RangeField
-              label="Shadow Intensity"
-              value={formData.shadow_intensity ?? 0}
-              min={0} max={10}
-              onChange={e => setFormData({ ...formData, shadow_intensity: +e.target.value })}
-            />
-            <RangeField
-              label="Border Radius"
-              value={formData.border_radius ?? 0}
-              min={0} max={50} unit="px"
-              onChange={e => setFormData({ ...formData, border_radius: +e.target.value })}
-            />
-            <RangeField
-              label="Blur Effect"
-              value={formData.blur_effect ?? 0}
-              min={0} max={20} unit="px"
-              onChange={e => setFormData({ ...formData, blur_effect: +e.target.value })}
-            />
+            <div className="color-picker-grid">
+              {COLOR_FIELDS.map(([label, key]) => {
+                const value = formData[key] || '#000000'
+                return (
+                  <label key={key} className="color-picker-card">
+                    <input
+                      type="color"
+                      className="color-picker-input"
+                      value={value}
+                      onChange={e => setFormData({ ...formData, [key]: e.target.value })}
+                      aria-label={`${label} color`}
+                    />
+                    <span className="color-picker-meta">
+                      <span className="color-picker-label">{label}</span>
+                      <span className="color-picker-hex">{value.toUpperCase()}</span>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
 
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14, color: '#374151' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.gradient_enabled || false}
-                  onChange={e => setFormData({ ...formData, gradient_enabled: e.target.checked })}
-                />
-                Enable Gradient Background
-              </label>
-              {formData.gradient_enabled && (
-                <div style={{ marginTop: 10 }}>
-                  <RangeField
-                    label="Gradient Angle"
-                    value={formData.gradient_angle ?? 45}
-                    min={0} max={360} unit="°"
-                    onChange={e => setFormData({ ...formData, gradient_angle: +e.target.value })}
-                  />
+            <details className="themes-advanced">
+              <summary className="themes-advanced__summary">
+                <span>Advanced &amp; Decorative Effects</span>
+                <ChevronDown size={15} className="themes-advanced__chevron" aria-hidden="true" />
+              </summary>
+              <div className="themes-advanced__body">
+                <div className="form-section themes-form-section--first">
+                  <span className="form-section__label">Visual Effects</span>
                 </div>
-              )}
-            </div>
 
-            <p style={{ fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', margin: '16px 0 12px 0' }}>
-              Animations
-            </p>
-
-            {selectField('Animation Type', formData.animation_type || 'none', e => setFormData({ ...formData, animation_type: e.target.value }), ANIMATION_OPTIONS)}
-
-            {formData.animation_type !== 'none' && (
-              <>
-                <FormField
-                  label="Duration (seconds)"
-                  type="number"
-                  min="0.5" max="5" step="0.5"
-                  value={formData.animation_duration || 1}
-                  onChange={e => setFormData({ ...formData, animation_duration: parseFloat(e.target.value) })}
+                <RangeField
+                  label="Shadow Intensity"
+                  value={formData.shadow_intensity ?? 0}
+                  min={0} max={10}
+                  onChange={e => setFormData({ ...formData, shadow_intensity: +e.target.value })}
                 />
-                <FormField
-                  label="Delay (seconds)"
-                  type="number"
-                  min="0" max="2" step="0.5"
-                  value={formData.animation_delay || 0}
-                  onChange={e => setFormData({ ...formData, animation_delay: parseFloat(e.target.value) })}
+                <RangeField
+                  label="Border Radius"
+                  value={formData.border_radius ?? 0}
+                  min={0} max={50} unit="px"
+                  onChange={e => setFormData({ ...formData, border_radius: +e.target.value })}
                 />
-              </>
-            )}
-
-            <p style={{ fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', margin: '16px 0 12px 0' }}>
-              Decorative Effects
-            </p>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14, color: '#374151' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.use_particles || false}
-                  onChange={e => setFormData({ ...formData, use_particles: e.target.checked })}
+                <RangeField
+                  label="Blur Effect"
+                  value={formData.blur_effect ?? 0}
+                  min={0} max={20} unit="px"
+                  onChange={e => setFormData({ ...formData, blur_effect: +e.target.value })}
                 />
-                Enable Particle Effects
-              </label>
-              {formData.use_particles && (
-                <div style={{ marginTop: 10 }}>
-                  {selectField('Particle Type', formData.particle_type || 'none', e => setFormData({ ...formData, particle_type: e.target.value }), PARTICLE_OPTIONS)}
+
+                <div className="themes-check-group">
+                  <label className="themes-check-label">
+                    <input
+                      type="checkbox"
+                      checked={formData.gradient_enabled || false}
+                      onChange={e => setFormData({ ...formData, gradient_enabled: e.target.checked })}
+                    />
+                    <span>Enable Gradient Background</span>
+                  </label>
+                  {formData.gradient_enabled && (
+                    <div className="themes-nested-control">
+                      <RangeField
+                        label="Gradient Angle"
+                        value={formData.gradient_angle ?? 45}
+                        min={0} max={360} unit="°"
+                        onChange={e => setFormData({ ...formData, gradient_angle: +e.target.value })}
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14, color: '#374151' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.use_hover_effects !== false}
-                  onChange={e => setFormData({ ...formData, use_hover_effects: e.target.checked })}
+                <div className="form-section">
+                  <span className="form-section__label">Animations</span>
+                </div>
+
+                <FormField
+                  label="Animation Type"
+                  name="animation_type"
+                  type="select"
+                  value={formData.animation_type || 'none'}
+                  onChange={e => setFormData({ ...formData, animation_type: e.target.value })}
+                  options={ANIMATION_OPTIONS}
                 />
-                Enable Hover Effects
-              </label>
-            </div>
 
-            {selectField('Card Style', formData.card_style || 'flat', e => setFormData({ ...formData, card_style: e.target.value }), CARD_STYLE_OPTIONS)}
+                {formData.animation_type && formData.animation_type !== 'none' && (
+                  <div className="form-grid-2">
+                    <FormField
+                      label="Duration (seconds)"
+                      name="animation_duration"
+                      type="number"
+                      min="0.5" max="5" step="0.5"
+                      value={formData.animation_duration ?? 1}
+                      onChange={e => setFormData({ ...formData, animation_duration: parseFloat(e.target.value) || 1 })}
+                    />
+                    <FormField
+                      label="Delay (seconds)"
+                      name="animation_delay"
+                      type="number"
+                      min="0" max="2" step="0.5"
+                      value={formData.animation_delay ?? 0}
+                      onChange={e => setFormData({ ...formData, animation_delay: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                )}
+
+                <div className="form-section">
+                  <span className="form-section__label">Decorative Effects</span>
+                </div>
+
+                <div className="themes-check-group">
+                  <label className="themes-check-label">
+                    <input
+                      type="checkbox"
+                      checked={formData.use_particles || false}
+                      onChange={e => setFormData({ ...formData, use_particles: e.target.checked })}
+                    />
+                    <span>Enable Particle Effects</span>
+                  </label>
+                  {formData.use_particles && (
+                    <div className="themes-nested-control">
+                      <FormField
+                        label="Particle Type"
+                        name="particle_type"
+                        type="select"
+                        value={formData.particle_type || 'none'}
+                        onChange={e => setFormData({ ...formData, particle_type: e.target.value })}
+                        options={PARTICLE_OPTIONS}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="themes-check-group">
+                  <label className="themes-check-label">
+                    <input
+                      type="checkbox"
+                      checked={formData.use_hover_effects !== false}
+                      onChange={e => setFormData({ ...formData, use_hover_effects: e.target.checked })}
+                    />
+                    <span>Enable Hover Effects</span>
+                  </label>
+                </div>
+
+                <FormField
+                  label="Card Style"
+                  name="card_style"
+                  type="select"
+                  value={formData.card_style || 'flat'}
+                  onChange={e => setFormData({ ...formData, card_style: e.target.value })}
+                  options={CARD_STYLE_OPTIONS}
+                />
+              </div>
+            </details>
           </div>
         </ModalForm>
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div className={`toast toast--${toast.type}`}>
-          {toast.type === 'success' && <Check size={15} />}
-          {toast.message}
-        </div>
-      )}
+      <AdminToast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   )
 }

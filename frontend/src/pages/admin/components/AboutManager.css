@@ -7,11 +7,17 @@
 }
 
 /* ── Sticky top bar ── */
+.about-icon-accent {
+  color: var(--admin-accent, #6366f1);
+  flex-shrink: 0;
+}
+
 .about-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
   background: #fff;
   border: 1px solid rgba(15, 23, 42, 0.07);
   border-radius: 14px;
@@ -93,6 +99,11 @@
   gap: 14px;
 }
 
+.about-card-body--center {
+  align-items: center;
+  text-align: center;
+}
+
 /* ── Field ── */
 .about-row {
   display: grid;
@@ -143,8 +154,9 @@
 }
 
 .about-input:focus {
-  border-color: #6366f1;
+  border-color: var(--admin-accent, #6366f1);
   background: #fff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .about-textarea {
@@ -171,8 +183,15 @@
 }
 
 .about-photo-upload:hover {
-  border-color: #6366f1;
+  border-color: var(--admin-accent, #6366f1);
   border-style: solid;
+}
+
+.about-photo-upload:focus-visible,
+.about-upload-btn:focus-visible,
+.about-resume-link:focus-visible {
+  outline: 2px solid var(--admin-accent, #6366f1);
+  outline-offset: 2px;
 }
 
 .about-photo-img {
@@ -242,10 +261,11 @@
 }
 
 .about-resume-link {
-  color: #6366f1;
+  color: var(--admin-accent, #6366f1);
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  border-radius: 4px;
 }
 .about-resume-link:hover { opacity: 0.7; }
 
@@ -263,13 +283,13 @@
   color: #374151;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
   align-self: flex-start;
 }
 .about-upload-btn:hover {
   background: #f8fafc;
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: var(--admin-accent, #6366f1);
+  color: var(--admin-accent, #6366f1);
 }
 
 /* ── Spinner in button ── */

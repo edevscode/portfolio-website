@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useTheme } from '../../../context/ThemeContext'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { API_BASE_URL } from '../../../services/apiService'
+import { useReveal } from '../../../hooks/useReveal'
 import Prose from '../../../components/Prose'
 import { safeHref } from '../../../utils/sanitize'
 import './Certificates.css'
+
+const INITIAL_VISIBLE = 6
 
 function normalizeUrl(url) {
   if (!url) return ''
@@ -36,9 +40,22 @@ function DocViewer({ file, type, caption, onClose }) {
     ? `https://docs.google.com/viewer?url=${encodeURIComponent(file)}&embedded=true`
     : `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(file)}`
 
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
   return (
-    <div className="cert-lightbox" onClick={onClose}>
-      <button className="cert-lb-close" onClick={onClose} aria-label="Close">✕</button>
+    <div className="cert-lightbox" role="dialog" aria-modal="true" aria-label={caption || 'Document viewer'} onClick={onClose}>
+      <button type="button" className="cert-lb-close" onClick={onClose} aria-label="Close">✕</button>
       <div className="cert-doc-frame" onClick={e => e.stopPropagation()}>
         <div className="cert-doc-toolbar">
           <span className="cert-doc-label">{type === 'pdf' ? 'PDF' : 'DOC'}{caption ? ` — ${caption}` : ''}</span>
@@ -78,6 +95,8 @@ function Lightbox({ images, startIndex, onClose }) {
   const next = useCallback(() => navigate((idx + 1) % images.length), [idx, images.length, navigate])
 
   useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     const onKey = (e) => {
       if (e.key === 'ArrowLeft') prev()
       else if (e.key === 'ArrowRight') next()
@@ -85,7 +104,10 @@ function Lightbox({ images, startIndex, onClose }) {
       else if (e.key === '0') resetView()
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener('keydown', onKey)
+    }
   }, [prev, next, onClose, resetView])
 
   // Scroll-to-zoom (non-passive so we can preventDefault)
@@ -143,25 +165,25 @@ function Lightbox({ images, startIndex, onClose }) {
   const current = images[idx]
 
   return (
-    <div ref={lbRef} className="cert-lightbox" onClick={onClose}>
-      <button className="cert-lb-close" onClick={onClose} aria-label="Close">
+    <div ref={lbRef} className="cert-lightbox" role="dialog" aria-modal="true" aria-label="Certificate image viewer" onClick={onClose}>
+      <button type="button" className="cert-lb-close" onClick={onClose} aria-label="Close">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
 
       {zoom > 1 && (
-        <button className="cert-lb-zoom-badge" onClick={e => { e.stopPropagation(); resetView() }}>
+        <button type="button" className="cert-lb-zoom-badge" onClick={e => { e.stopPropagation(); resetView() }}>
           {Math.round(zoom * 10) / 10}× &nbsp;·&nbsp; click to reset
         </button>
       )}
 
       {images.length > 1 && (
         <>
-          <button className="cert-lb-nav cert-lb-prev" onClick={e => { e.stopPropagation(); prev() }} aria-label="Previous">
+          <button type="button" className="cert-lb-nav cert-lb-prev" onClick={e => { e.stopPropagation(); prev() }} aria-label="Previous">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <button className="cert-lb-nav cert-lb-next" onClick={e => { e.stopPropagation(); next() }} aria-label="Next">
+          <button type="button" className="cert-lb-nav cert-lb-next" onClick={e => { e.stopPropagation(); next() }} aria-label="Next">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </>
@@ -204,12 +226,11 @@ function Lightbox({ images, startIndex, onClose }) {
 }
 
 /* ─── Card ──────────────────────────────────────────────────────────────── */
-function CertCard({ cert, primary, accent, text }) {
+function CertCard({ cert, primary, accent, showFeaturedBadge }) {
   const [lightboxStart, setLightboxStart] = useState(null)
   const [viewingDoc, setViewingDoc] = useState(null)
   const [failedUrls, setFailedUrls] = useState(new Set())
 
-  const isExpired = cert.expiry_date && new Date(cert.expiry_date) < new Date()
   const files = (cert.files || [])
     .map(f => ({ ...f, file: normalizeUrl(f.file) }))
     .filter(f => f.file)  // skip null/empty file URLs
@@ -230,84 +251,96 @@ function CertCard({ cert, primary, accent, text }) {
         <DocViewer {...viewingDoc} onClose={() => setViewingDoc(null)} />
       )}
 
-      <div className={`cert-card${cert.is_featured ? ' cert-card--featured' : ''}`} style={{ '--primary': primary, '--accent': accent }}>
-        {cert.is_featured && <div className="cert-featured-ribbon">Featured</div>}
-
-        {/* Top row: badge + meta tags */}
+      <div className={`cert-card${showFeaturedBadge ? ' cert-card--featured' : ''}`} style={{ '--primary': primary, '--accent': accent }}>
+        {/* Top row: badge + restrained inline meta tags */}
         <div className="cert-card-top">
           {/* Badge / first image thumbnail */}
           {firstImage ? (
-            <img
-              src={firstImage.file}
-              alt={cert.title}
-              className="cert-badge cert-badge--clickable"
+            <button
+              type="button"
+              className="cert-badge-btn"
               onClick={() => setLightboxStart(0)}
-              title="Click to view"
-              onError={() => onImgError(firstImage.file)}
-            />
+              aria-label={`View ${cert.title} certificate`}
+              title="Click to view certificate"
+            >
+              <img
+                src={firstImage.file}
+                alt={cert.title}
+                className="cert-badge"
+                onError={() => onImgError(firstImage.file)}
+              />
+            </button>
           ) : (
-            <div className="cert-badge-placeholder" style={{ background: `linear-gradient(135deg, ${primary}22, ${accent}22)`, border: `2px solid ${primary}33` }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={primary} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="cert-badge-placeholder">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="8" r="6" />
                 <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
               </svg>
             </div>
           )}
 
-          <div className="cert-meta">
-            {files.length > 0 && (
-              <span className="cert-tag cert-tag--files">{files.length} file{files.length !== 1 ? 's' : ''}</span>
-            )}
-          </div>
+          {(showFeaturedBadge || files.length > 1) && (
+            <div className="cert-meta">
+              {showFeaturedBadge && (
+                <span className="cert-tag cert-tag--featured">Featured</span>
+              )}
+              {files.length > 1 && (
+                <span className="cert-tag cert-tag--files">{files.length} files</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Text body */}
         <div className="cert-card-body">
-          <h3 className="cert-title" style={{ color: text }}>{cert.title}</h3>
-          <p className="cert-issuer" style={{ color: primary }}>{cert.issuer}</p>
-          {cert.description && <Prose className="cert-desc" style={{ color: text }}>{cert.description}</Prose>}
-          <div className="cert-dates" style={{ color: text }}>
+          <h3 className="cert-title">{cert.title}</h3>
+          <p className="cert-issuer">{cert.issuer}</p>
+          {cert.description && <Prose className="cert-desc">{cert.description}</Prose>}
+          <div className="cert-dates">
             <span>Issued {formatDate(cert.issue_date)}</span>
           </div>
-          {cert.credential_id && <p className="cert-id" style={{ color: text }}>ID: {cert.credential_id}</p>}
+          {cert.credential_id && <p className="cert-id">ID: {cert.credential_id}</p>}
         </div>
 
         {/* Image strip (when there are multiple images) */}
         {imageFiles.length > 1 && (
           <div className="cert-img-strip">
             {imageFiles.map((img, i) => (
-              <img
+              <button
                 key={img.id}
-                src={img.file}
-                alt={img.caption || `File ${i + 1}`}
-                className="cert-strip-thumb"
+                type="button"
+                className="cert-strip-thumb-btn"
                 onClick={() => setLightboxStart(i)}
+                aria-label={img.caption ? `View ${img.caption}` : `View image ${i + 1}`}
                 title={img.caption || `View image ${i + 1}`}
-                onError={() => onImgError(img.file)}
-              />
+              >
+                <img
+                  src={img.file}
+                  alt={img.caption || `File ${i + 1}`}
+                  className="cert-strip-thumb"
+                  onError={() => onImgError(img.file)}
+                />
+              </button>
             ))}
           </div>
         )}
 
-        {/* Footer: view buttons for all file types + verify link */}
-        {(imageFiles.length > 0 || docFiles.length > 0 || cert.credential_url) && (
+        {/* Footer: single consolidated image trigger + doc triggers + verify link */}
+        {(imageFiles.length > 0 || docFiles.length > 0 || safeHref(cert.credential_url)) && (
           <div className="cert-card-footer">
-            {imageFiles.map((f, i) => (
+            {imageFiles.length > 0 && (
               <button
-                key={f.id}
                 type="button"
-                onClick={() => setLightboxStart(i)}
+                onClick={() => setLightboxStart(0)}
                 className="cert-verify-btn cert-verify-btn--btn"
-                style={{ '--btn-color': 'var(--primary)' }}
               >
-                View Image
-                {f.caption && <span style={{ fontWeight: 400, opacity: 0.75 }}> — {f.caption}</span>}
+                {imageFiles.length > 1 ? `View Images (${imageFiles.length})` : 'View Certificate'}
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
               </button>
-            ))}
+            )}
             {docFiles.map(f => {
               const type = getType(f)
               return (
@@ -315,11 +348,10 @@ function CertCard({ cert, primary, accent, text }) {
                   key={f.id}
                   type="button"
                   onClick={() => setViewingDoc({ file: f.file, type, caption: f.caption })}
-                  className="cert-verify-btn cert-verify-btn--btn"
-                  style={{ '--btn-color': type === 'word' ? '#2563eb' : '#dc2626' }}
+                  className="cert-verify-btn cert-verify-btn--btn cert-verify-btn--doc"
                 >
                   {type === 'pdf' ? 'View PDF' : 'View DOC'}
-                  {f.caption && <span style={{ fontWeight: 400, opacity: 0.75 }}> — {f.caption}</span>}
+                  {f.caption && <span style={{ fontWeight: 400 }}> — {f.caption}</span>}
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M15 3h6v6M10 14L21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                   </svg>
@@ -332,7 +364,6 @@ function CertCard({ cert, primary, accent, text }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="cert-verify-btn"
-                style={{ '--btn-color': primary }}
               >
                 Verify Credential
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -353,30 +384,83 @@ function CertCard({ cert, primary, accent, text }) {
 export default function Certificates({ certificates }) {
   const { theme } = useTheme()
   const { config: seasonConfig } = useSeasonContext()
+  const [expanded, setExpanded] = useState(false)
+  const [revealRef, visible] = useReveal()
 
-  if (!certificates?.length) return null
+  const orderedCerts = useMemo(() => {
+    if (!certificates?.length) return []
+    const featured = certificates.filter((c) => c.is_featured)
+    const regular = certificates.filter((c) => !c.is_featured)
+    return featured.length > 0 && featured.length < certificates.length
+      ? [...featured, ...regular]
+      : certificates
+  }, [certificates])
+
+  if (!orderedCerts.length) return null
 
   const primary = theme?.primary_color || seasonConfig?.colors?.primary || '#6366f1'
   const accent  = theme?.accent_color  || seasonConfig?.colors?.accent  || '#4da6ff'
   const bg      = theme?.background_color || seasonConfig?.colors?.background || '#fff'
   const text    = theme?.text_color    || seasonConfig?.colors?.text    || '#111'
 
+  const featuredCount = orderedCerts.filter(c => c.is_featured).length
+  const showFeaturedBadges = featuredCount > 0 && featuredCount < orderedCerts.length
+  const hasMore = orderedCerts.length > INITIAL_VISIBLE
+  const visibleCerts = expanded || !hasMore ? orderedCerts : orderedCerts.slice(0, INITIAL_VISIBLE)
+
   return (
-    <section className="certs-section" id="certificates" style={{ '--cert-primary': primary, '--cert-accent': accent, '--cert-bg': bg, '--cert-text': text }}>
+    <section
+      ref={revealRef}
+      className={`certs-section pv-reveal${visible ? ' pv-reveal--visible' : ''}`}
+      id="certificates"
+      style={{ '--cert-primary': primary, '--cert-accent': accent, '--cert-bg': bg, '--cert-text': text }}
+    >
       <div className="certs-inner">
         <div className="certs-heading">
-          <span className="certs-label">Achievements</span>
-          <h2 className="certs-title" style={{ color: primary }}>Certificates &amp; Credentials</h2>
-          <p className="certs-subtitle" style={{ color: text }}>
-            Verified skills and accomplishments earned through dedicated learning
-          </p>
+          <div>
+            <span className="pv-section-eyebrow certs-label">
+              <span className="pv-section-eyebrow-num">05</span>
+              <span>Credentials</span>
+            </span>
+            <h2 className="certs-title">Certificates &amp; Credentials</h2>
+          </div>
+          <span className="certs-count">
+            {orderedCerts.length} {orderedCerts.length === 1 ? 'credential' : 'credentials'}
+          </span>
         </div>
 
         <div className="certs-grid">
-          {certificates.map(cert => (
-            <CertCard key={cert.id} cert={cert} primary={primary} accent={accent} text={text} />
+          {visibleCerts.map(cert => (
+            <CertCard
+              key={cert.id}
+              cert={cert}
+              primary={primary}
+              accent={accent}
+              showFeaturedBadge={showFeaturedBadges && Boolean(cert.is_featured)}
+            />
           ))}
         </div>
+
+        {hasMore && (
+          <div className="certs-toggle-wrap">
+            <button
+              type="button"
+              className="certs-toggle-btn"
+              onClick={() => setExpanded((prev) => !prev)}
+              aria-expanded={expanded}
+            >
+              {expanded ? (
+                <>
+                  Show fewer <ChevronUp size={15} aria-hidden="true" />
+                </>
+              ) : (
+                <>
+                  Show all {orderedCerts.length} certificates <ChevronDown size={15} aria-hidden="true" />
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   )

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { Eye, Globe, Monitor, Smartphone, Tablet, RefreshCw, TrendingUp, Users } from 'lucide-react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { Eye, Globe, Monitor, Smartphone, Tablet, RefreshCw, TrendingUp, Users, Search, X } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import './DashboardHome.css'
 import './VisitorsManager.css'
@@ -37,6 +37,8 @@ export default function VisitorsManager() {
   const [visitorError, setVisitorError] = useState(null)
   const [loading, setLoading]   = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [search, setSearch]     = useState('')
+  const [deviceFilter, setDeviceFilter] = useState('all')
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -69,6 +71,20 @@ export default function VisitorsManager() {
   const totalDevices = stats.devices.reduce((s, d) => s + d.count, 0) || 1
   const deviceMap = Object.fromEntries(stats.devices.map(d => [d.device_type, d.count]))
 
+  const filteredVisitors = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return visitors.filter((v) => {
+      if (deviceFilter !== 'all' && (v.device_type || 'desktop') !== deviceFilter) return false
+      if (q) {
+        const hay = `${v.city || ''} ${v.region || ''} ${v.country || ''} ${v.browser || ''} ${v.referrer || ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [visitors, search, deviceFilter])
+
+  const isFiltered = Boolean(search.trim() || deviceFilter !== 'all')
+
   return (
     <div className="vm-root">
 
@@ -79,9 +95,11 @@ export default function VisitorsManager() {
           <p className="vm-sub">People who visited your portfolio</p>
         </div>
         <button
+          type="button"
           className={`dh-refresh-btn${refreshing ? ' spinning' : ''}`}
           onClick={() => load(true)}
-          title="Refresh"
+          title="Refresh visitor analytics"
+          aria-label="Refresh visitor analytics"
         >
           <RefreshCw size={15} />
         </button>
@@ -89,29 +107,29 @@ export default function VisitorsManager() {
 
       {/* Stat row */}
       <div className="vm-stats">
-        <div className="vm-stat" style={{ '--acc': '#14b8a6' }}>
-          <Eye size={18} />
+        <div className="vm-stat">
+          <div className="vm-stat-icon" aria-hidden="true"><Eye size={17} /></div>
           <div>
             <div className="vm-stat-val">{loading ? '—' : stats.total.toLocaleString()}</div>
             <div className="vm-stat-lbl">Total Visitors</div>
           </div>
         </div>
-        <div className="vm-stat" style={{ '--acc': '#6366f1' }}>
-          <TrendingUp size={18} />
+        <div className="vm-stat">
+          <div className="vm-stat-icon" aria-hidden="true"><TrendingUp size={17} /></div>
           <div>
             <div className="vm-stat-val">{loading ? '—' : stats.today.toLocaleString()}</div>
             <div className="vm-stat-lbl">Today</div>
           </div>
         </div>
-        <div className="vm-stat" style={{ '--acc': '#10b981' }}>
-          <Globe size={18} />
+        <div className="vm-stat">
+          <div className="vm-stat-icon" aria-hidden="true"><Globe size={17} /></div>
           <div>
             <div className="vm-stat-val">{loading ? '—' : stats.countries.length}</div>
             <div className="vm-stat-lbl">Countries</div>
           </div>
         </div>
-        <div className="vm-stat" style={{ '--acc': '#f59e0b' }}>
-          <Users size={18} />
+        <div className="vm-stat">
+          <div className="vm-stat-icon" aria-hidden="true"><Users size={17} /></div>
           <div>
             <div className="vm-stat-val">{loading ? '—' : (deviceMap['mobile'] || 0)}</div>
             <div className="vm-stat-lbl">Mobile Visitors</div>
@@ -127,17 +145,68 @@ export default function VisitorsManager() {
           <div className="dh-card-head">
             <Eye size={15} className="dh-card-icon" />
             <h3>Visitor Log</h3>
-            <span className="dh-card-badge">{visitors.length}</span>
+            <span className="dh-card-badge">
+              {isFiltered ? `${filteredVisitors.length} / ${visitors.length}` : visitors.length}
+            </span>
           </div>
 
+          {!loading && !visitorError && visitors.length > 0 && (
+            <div className="vm-filters">
+              <div className="manager-search">
+                <Search size={14} className="manager-search__icon" aria-hidden="true" />
+                <input
+                  type="search"
+                  className="manager-search__input"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Filter by location, browser, source…"
+                  aria-label="Filter visitor log"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    className="manager-search__clear"
+                    onClick={() => setSearch('')}
+                    aria-label="Clear search"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+              <div className="manager-filter-pills" role="group" aria-label="Filter by device">
+                {['all', 'desktop', 'mobile', 'tablet'].map((dev) => (
+                  <button
+                    key={dev}
+                    type="button"
+                    className={`manager-filter-pill${deviceFilter === dev ? ' is-active' : ''}`}
+                    aria-pressed={deviceFilter === dev}
+                    onClick={() => setDeviceFilter(dev)}
+                  >
+                    {dev === 'all' ? 'All' : dev[0].toUpperCase() + dev.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {loading ? (
-            <div className="dh-empty">Loading…</div>
+            <div className="table-skeleton" aria-busy="true" aria-label="Loading visitor log">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="table-skeleton__row">
+                  <div className="table-skeleton__bar" style={{ flex: 1 }} />
+                  <div className="table-skeleton__bar" style={{ width: 70 }} />
+                  <div className="table-skeleton__bar" style={{ width: 64 }} />
+                </div>
+              ))}
+            </div>
           ) : visitorError ? (
-            <div className="dh-empty vm-error">
+            <div className="dh-empty vm-error" role="alert">
               <strong>Could not load visitor log:</strong><br />{visitorError}
             </div>
-          ) : visitors.length === 0 ? (
-            <div className="dh-empty">No visitors yet. Share your portfolio!</div>
+          ) : filteredVisitors.length === 0 ? (
+            <div className="dh-empty">
+              {isFiltered ? 'No visitors match your filter.' : 'No visitors yet. Share your portfolio!'}
+            </div>
           ) : (
             <div className="vm-table-wrap">
               <table className="vm-table">
@@ -151,7 +220,7 @@ export default function VisitorsManager() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visitors.map(v => (
+                  {filteredVisitors.map(v => (
                     <tr key={v.id}>
                       <td>
                         <span className="vm-flag">{flagEmoji(v.country_code)}</span>
@@ -219,18 +288,19 @@ export default function VisitorsManager() {
             ) : (
               <div className="dh-device-list">
                 {[
-                  { key: 'desktop', icon: Monitor,    label: 'Desktop', color: '#6366f1' },
-                  { key: 'mobile',  icon: Smartphone, label: 'Mobile',  color: '#10b981' },
-                  { key: 'tablet',  icon: Tablet,     label: 'Tablet',  color: '#f59e0b' },
-                ].map(({ key, icon: Icon, label, color }) => {
-                  const count = deviceMap[key] || 0
+                  { key: 'desktop', icon: Monitor,    label: 'Desktop', color: 'var(--admin-accent, #6366f1)' },
+                  { key: 'mobile',  icon: Smartphone, label: 'Mobile',  color: '#0f766e' },
+                  { key: 'tablet',  icon: Tablet,     label: 'Tablet',  color: '#64748b' },
+                ].map((item) => {
+                  const Icon = item.icon
+                  const count = deviceMap[item.key] || 0
                   const pct = Math.round((count / totalDevices) * 100)
                   return (
-                    <div key={key} className="dh-device-row">
-                      <Icon size={14} style={{ color }} />
-                      <span className="dh-device-label">{label}</span>
+                    <div key={item.key} className="dh-device-row">
+                      <Icon size={14} style={{ color: item.color }} />
+                      <span className="dh-device-label">{item.label}</span>
                       <div className="dh-device-track">
-                        <div className="dh-device-fill" style={{ width: `${pct}%`, background: color }} />
+                        <div className="dh-device-fill" style={{ width: `${pct}%`, background: item.color }} />
                       </div>
                       <span className="dh-device-pct">{pct}%</span>
                     </div>

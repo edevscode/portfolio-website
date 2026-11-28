@@ -4,9 +4,30 @@
   --accent-color: #0066cc;
   --bg-color: #f5f5f5;
   --text-color: #333333;
+  --theme-bg: #f5f5f5;
+  --theme-text: #333333;
+  --theme-text-muted: #5a5a5a;
+  --theme-surface: #ffffff;
+  --theme-surface-text: #333333;
+  --theme-surface-muted: #5a5a5a;
+  --theme-heading: #000000;
+  --theme-heading-on-surface: #000000;
+  --theme-accent-text: #0066cc;
+  --theme-accent-on-surface: #0066cc;
+  --theme-on-primary: #ffffff;
+  --theme-on-accent: #ffffff;
+  --theme-on-primary-muted: rgba(255, 255, 255, 0.78);
+  --theme-on-primary-border: rgba(255, 255, 255, 0.22);
+  --theme-border: rgba(51, 51, 51, 0.12);
+  --theme-border-strong: rgba(51, 51, 51, 0.22);
+  --theme-surface-border: rgba(51, 51, 51, 0.12);
+  --theme-tint: rgba(51, 51, 51, 0.05);
+  --theme-surface-tint: rgba(51, 51, 51, 0.05);
   --bg-image: none;
   --border-radius: 8px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 * {
@@ -20,9 +41,7 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-color);
@@ -67,36 +86,6 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
 }
 
-/* Section heading accent underline */
-.about h2,
-.skills h2,
-.experience h2,
-.contact h2,
-.projects h2,
-.projects-title,
-.testimonials h2 {
-  position: relative;
-  padding-bottom: 16px;
-}
-
-.about h2::after,
-.skills h2::after,
-.experience h2::after,
-.contact h2::after,
-.projects h2::after,
-.projects-title::after,
-.testimonials h2::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 48px;
-  height: 3px;
-  background: var(--accent-color);
-  border-radius: 100px;
-}
-
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
@@ -119,5 +108,5 @@ select:focus {
 /* Selection */
 ::selection {
   background-color: var(--accent-color);
-  color: var(--secondary-color);
+  color: var(--theme-on-accent);
 }

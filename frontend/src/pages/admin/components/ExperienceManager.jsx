@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react'
-import { Plus, Briefcase } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Plus, Briefcase, Search, X } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
-import { FormField, ModalForm, Table } from './Form'
+import { AdminToast, ConfirmDialog, FormField, ModalForm, Table } from './Form'
 import './Manager.css'
 
 export default function ExperienceManager() {
@@ -9,6 +9,13 @@ export default function ExperienceManager() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [reordering, setReordering] = useState(false)
+  const [search, setSearch] = useState('')
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
   const [formData, setFormData] = useState({
     title: '',
     company: '',
@@ -19,21 +26,29 @@ export default function ExperienceManager() {
     order: 0,
   })
 
-  useEffect(() => {
-    loadExperiences()
+  const showToast = useCallback((message, type = 'success') => {
+    clearTimeout(toastTimer.current)
+    setToast({ message, type })
+    toastTimer.current = setTimeout(() => setToast(null), 3200)
   }, [])
 
-  const loadExperiences = async () => {
+  const loadExperiences = useCallback(async () => {
     try {
       setLoading(true)
       const response = await apiService.getExperiences()
       setExperiences(response.data)
     } catch (error) {
       console.error('Failed to load experiences:', error)
+      showToast('Failed to load experience entries', 'error')
     } finally {
       setLoading(false)
     }
-  }
+  }, [showToast])
+
+  useEffect(() => {
+    loadExperiences()
+    return () => clearTimeout(toastTimer.current)
+  }, [loadExperiences])
 
   const handleAdd = () => {
     setFormData({
@@ -59,19 +74,26 @@ export default function ExperienceManager() {
     setShowForm(true)
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure?')) return
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return
+    setDeleting(true)
     try {
-      await apiService.deleteExperience(id)
-      setExperiences(experiences.filter((e) => e.id !== id))
+      await apiService.deleteExperience(deleteTargetId)
+      setExperiences((prev) => prev.filter((e) => e.id !== deleteTargetId))
+      setDeleteTargetId(null)
+      showToast('Experience deleted')
     } catch (error) {
       console.error('Failed to delete experience:', error)
-      alert('Failed to delete experience')
+      showToast('Failed to delete experience', 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (submitting) return
+    setSubmitting(true)
     try {
       const targetOrder = formData.order
       const toShift = experiences
@@ -91,47 +113,134 @@ export default function ExperienceManager() {
 
       if (editingId) {
         await apiService.updateExperience(editingId, payload)
+        showToast('Experience updated')
       } else {
         await apiService.createExperience(payload)
+        showToast('Experience added')
       }
 
       setShowForm(false)
       loadExperiences()
     } catch (error) {
       console.error('Failed to save experience:', error)
-      alert('Failed to save experience')
+      showToast('Failed to save experience', 'error')
+    } finally {
+      setSubmitting(false)
     }
   }
+
+  const handleReorder = async (fromIdx, toIdx) => {
+    if (reordering || toIdx < 0 || toIdx >= experiences.length) return
+    const nextList = [...experiences]
+    const [moved] = nextList.splice(fromIdx, 1)
+    nextList.splice(toIdx, 0, moved)
+    const normalized = nextList.map((x, idx) => ({ ...x, order: idx + 1 }))
+    const prevList = experiences
+    setReordering(true)
+    setExperiences(normalized)
+    try {
+      const changed = normalized.filter((x) => {
+        const prev = prevList.find((p) => p.id === x.id)
+        return prev && prev.order !== x.order
+      })
+      for (const x of changed) {
+        await apiService.updateExperience(x.id, { order: x.order })
+      }
+      showToast('Experience order updated')
+    } catch {
+      setExperiences(prevList)
+      showToast('Failed to reorder experience entries', 'error')
+    } finally {
+      setReordering(false)
+    }
+  }
+
+  const filteredExperiences = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return experiences
+    return experiences.filter(
+      (x) =>
+        (x.title || '').toLowerCase().includes(q) ||
+        (x.company || '').toLowerCase().includes(q)
+    )
+  }, [experiences, search])
+
+  const isFiltered = Boolean(search.trim())
 
   const columns = [
     { key: 'title', label: 'Title' },
     { key: 'company', label: 'Company' },
     { key: 'start_date', label: 'Start' },
-    { key: 'end_date', label: 'End', render: (val, row) => (row.is_current ? 'Present' : (val || '')) },
+    {
+      key: 'end_date',
+      label: 'End',
+      render: (val, row) =>
+        row.is_current
+          ? <span className="badge badge--green">Present</span>
+          : (val || '—'),
+    },
     { key: 'order', label: 'Order' },
   ]
 
+  const deleteTarget = experiences.find((x) => x.id === deleteTargetId)
+
   return (
     <div className="manager">
-      <div className="manager-header">
-        <div className="manager-header-left">
-          <Briefcase size={22} color="#6366f1" />
-          <h2>Experience</h2>
+      <div className="manager-toolbar">
+        <div className="manager-toolbar-left">
+          <div className="manager-search">
+            <Search size={14} className="manager-search__icon" aria-hidden="true" />
+            <input
+              type="search"
+              className="manager-search__input"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search roles or companies…"
+              aria-label="Search experience"
+            />
+            {search && (
+              <button
+                type="button"
+                className="manager-search__clear"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
           {!loading && experiences.length > 0 && (
-            <span className="skill-count-badge">{experiences.length}</span>
+            <span className="manager-result-meta">
+              {isFiltered ? `${filteredExperiences.length} of ${experiences.length}` : `${experiences.length} total`}
+            </span>
           )}
         </div>
-        <button className="btn-primary" onClick={handleAdd}>
-          <Plus size={20} /> Add Experience
+        <button type="button" className="btn-primary" onClick={handleAdd}>
+          <Plus size={16} /> Add Experience
         </button>
       </div>
 
       <Table
         columns={columns}
-        data={experiences}
+        data={filteredExperiences}
         onEdit={handleEdit}
-        onDelete={handleDelete}
+        onDelete={setDeleteTargetId}
+        onMoveUp={!isFiltered && experiences.length > 1 ? (idx) => handleReorder(idx, idx - 1) : undefined}
+        onMoveDown={!isFiltered && experiences.length > 1 ? (idx) => handleReorder(idx, idx + 1) : undefined}
+        reordering={reordering}
         loading={loading}
+        emptyIcon={Briefcase}
+        emptyText={isFiltered ? 'No matching roles' : 'No work experience yet'}
+        emptyDescription={
+          isFiltered
+            ? 'Try searching for a different role or company.'
+            : 'Add your work history to build your portfolio career timeline.'
+        }
+        emptyAction={
+          isFiltered
+            ? { label: 'Clear Search', onClick: () => setSearch('') }
+            : { label: 'Add Experience', onClick: handleAdd }
+        }
       />
 
       {showForm && (
@@ -139,57 +248,86 @@ export default function ExperienceManager() {
           title={editingId ? 'Edit Experience' : 'Add Experience'}
           onSubmit={handleSubmit}
           onClose={() => setShowForm(false)}
+          submitting={submitting}
         >
           <FormField
             label="Title"
+            name="title"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             required
           />
           <FormField
             label="Company"
+            name="company"
             value={formData.company}
             onChange={(e) => setFormData({ ...formData, company: e.target.value })}
           />
           <FormField
             label="Description"
+            name="description"
             type="markdown"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={6}
           />
-          <FormField
-            label="Start Date"
-            type="date"
-            value={formData.start_date}
-            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-            required
-          />
-          <FormField
-            label="End Date"
-            type="date"
-            value={formData.end_date || ''}
-            onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-            required={!formData.is_current}
-          />
+          <div className="form-grid-2">
+            <FormField
+              label="Start Date"
+              name="start_date"
+              type="date"
+              value={formData.start_date}
+              onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              required
+            />
+            <FormField
+              label="End Date"
+              name="end_date"
+              type="date"
+              value={formData.is_current ? '' : (formData.end_date || '')}
+              onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              required={!formData.is_current}
+              disabled={!!formData.is_current}
+            />
+          </div>
           <div className="checkbox-group">
             <label>
               <input
                 type="checkbox"
                 checked={!!formData.is_current}
-                onChange={(e) => setFormData({ ...formData, is_current: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    is_current: e.target.checked,
+                    end_date: e.target.checked ? '' : formData.end_date,
+                  })
+                }
               />
-              Current
+              Currently working here
             </label>
           </div>
           <FormField
-            label="Order"
+            label="Display Order"
+            name="order"
             type="number"
+            min={0}
             value={formData.order}
-            onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
+            onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value, 10) || 0 })}
           />
         </ModalForm>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTargetId}
+        title="Delete experience?"
+        message={deleteTarget ? `Remove "${deleteTarget.title}" from your experience timeline?` : ''}
+        confirmText="Delete"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+
+      <AdminToast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   )
 }

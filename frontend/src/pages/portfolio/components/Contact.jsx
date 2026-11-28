@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Check, Copy } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
+import { useReveal } from '../../../hooks/useReveal'
 import { safeHref } from '../../../utils/sanitize'
 import './Contact.css'
 
@@ -65,6 +67,36 @@ export default function Contact({ about, socialLinks }) {
 
   const [formData, setFormData] = useState(EMPTY)
   const [status, setStatus] = useState(null) // null | 'sending' | 'success' | 'error'
+  const [copiedEmail, setCopiedEmail] = useState(false)
+  const copyTimer = useRef(null)
+  const [revealRef, visible] = useReveal()
+
+  useEffect(() => () => clearTimeout(copyTimer.current), [])
+
+  const handleCopyEmail = async () => {
+    const email = about?.email
+    if (!email) return
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(email)
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = email
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      clearTimeout(copyTimer.current)
+      setCopiedEmail(true)
+      copyTimer.current = setTimeout(() => setCopiedEmail(false), 2200)
+    } catch {
+      /* clipboard blocked */
+    }
+  }
 
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
 
@@ -84,7 +116,8 @@ export default function Contact({ about, socialLinks }) {
 
   return (
     <section
-      className="contact-section"
+      ref={revealRef}
+      className={`contact-section pv-reveal${visible ? ' pv-reveal--visible' : ''}`}
       id="contact"
       style={{ '--cp': primary, '--ca': accent, '--cb': bg, '--ct': text }}
     >
@@ -92,10 +125,13 @@ export default function Contact({ about, socialLinks }) {
 
         {/* Heading */}
         <div className="contact-heading">
-          <span className="contact-label">Contact</span>
-          <h2 className="contact-title">Let's Work Together</h2>
+          <span className="pv-section-eyebrow contact-label">
+            <span className="pv-section-eyebrow-num">06</span>
+            <span>Contact</span>
+          </span>
+          <h2 className="contact-title">Let&apos;s Work Together</h2>
           <p className="contact-subtitle">
-            Have a project in mind or just want to say hello? I'd love to hear from you.
+            Have a project, role, or collaboration in mind? Send a message or copy my email directly.
           </p>
         </div>
 
@@ -104,15 +140,29 @@ export default function Contact({ about, socialLinks }) {
           {/* Left: info panel */}
           <div className="contact-info">
             {about?.email && (
-              <a href={`mailto:${about.email}`} className="contact-info-row">
-                <span className="contact-info-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2"/>
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/>
-                  </svg>
-                </span>
-                <span className="contact-info-text">{about.email}</span>
-              </a>
+              <div className="contact-email-card">
+                <a href={`mailto:${about.email}`} className="contact-info-row contact-info-row--email">
+                  <span className="contact-info-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="4" width="20" height="16" rx="2"/>
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/>
+                    </svg>
+                  </span>
+                  <span className="contact-info-text">{about.email}</span>
+                </a>
+                <button
+                  type="button"
+                  className={`contact-copy-btn${copiedEmail ? ' is-copied' : ''}`}
+                  onClick={handleCopyEmail}
+                  aria-label={copiedEmail ? 'Email address copied' : 'Copy email address'}
+                >
+                  {copiedEmail ? (
+                    <><Check size={13} aria-hidden="true" /> Copied</>
+                  ) : (
+                    <><Copy size={13} aria-hidden="true" /> Copy</>
+                  )}
+                </button>
+              </div>
             )}
             {about?.phone && (
               <a href={`tel:${about.phone}`} className="contact-info-row">
@@ -171,7 +221,7 @@ export default function Contact({ about, socialLinks }) {
                 </div>
                 <h3>Message sent!</h3>
                 <p>Thanks for reaching out. I'll get back to you soon.</p>
-                <button className="contact-reset-btn" onClick={() => setStatus(null)}>
+                <button type="button" className="contact-reset-btn" onClick={() => setStatus(null)}>
                   Send another message
                 </button>
               </div>
@@ -233,7 +283,7 @@ export default function Contact({ about, socialLinks }) {
                 </div>
 
                 {status === 'error' && (
-                  <p className="contact-error">Something went wrong. Please try again.</p>
+                  <p className="contact-error" role="alert">Something went wrong. Please try again.</p>
                 )}
 
                 <button

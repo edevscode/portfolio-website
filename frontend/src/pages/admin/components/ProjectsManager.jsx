@@ -1,8 +1,26 @@
-import React, { useState, useEffect } from 'react'
-import { Plus, Globe, Image, GalleryHorizontal, Film } from 'lucide-react'
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react'
+import { Plus, Globe, Image, GalleryHorizontal, Film, Search, X } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
-import { FormField, ModalForm, Table } from './Form'
+import { AdminToast, ConfirmDialog, FormField, ModalForm, Table } from './Form'
 import './Manager.css'
+
+const PROJECT_TYPE_OPTIONS = [
+  { value: 'live',    label: 'Live Site / Web App' },
+  { value: 'mobile',  label: 'Mobile App' },
+  { value: 'desktop', label: 'Desktop App' },
+  { value: 'api',     label: 'API / Backend' },
+  { value: 'design',  label: 'UI/UX Design' },
+  { value: 'local',   label: 'Local Project / Gallery' },
+]
+
+const PROJECT_TYPE_BADGE = {
+  live:    { label: 'Live',    cls: 'badge--blue' },
+  mobile:  { label: 'Mobile',  cls: 'badge--purple' },
+  desktop: { label: 'Desktop', cls: 'badge--blue' },
+  api:     { label: 'API',     cls: 'badge--gray' },
+  design:  { label: 'Design',  cls: 'badge--orange' },
+  local:   { label: 'Gallery', cls: 'badge--purple' },
+}
 
 export default function ProjectsManager() {
   const [projects, setProjects] = useState([])
@@ -10,6 +28,20 @@ export default function ProjectsManager() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [togglingKey, setTogglingKey] = useState(null)
+  const [reordering, setReordering] = useState(false)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+
+  const showToast = useCallback((message, type = 'success') => {
+    clearTimeout(toastTimer.current)
+    setToast({ message, type })
+    toastTimer.current = setTimeout(() => setToast(null), 3200)
+  }, [])
 
   const [formData, setFormData] = useState({
     title: '',
@@ -35,28 +67,31 @@ export default function ProjectsManager() {
   const [videoItems, setVideoItems] = useState([])
   const [replaceVideos, setReplaceVideos] = useState(false)
 
-  useEffect(() => { loadProjects() }, [])
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       setLoading(true)
       const response = await apiService.getProjects()
       setProjects(response.data)
     } catch (error) {
       console.error('Failed to load projects:', error)
-      alert('Failed to load projects')
+      showToast('Failed to load projects', 'error')
     } finally {
       setLoading(false)
     }
-  }
+  }, [showToast])
+
+  useEffect(() => {
+    loadProjects()
+    return () => clearTimeout(toastTimer.current)
+  }, [loadProjects])
 
   const revokeAll = (items) =>
-    items.forEach((it) => { if (it.previewUrl) try { URL.revokeObjectURL(it.previewUrl) } catch { } })
+    items.forEach((it) => { if (it.previewUrl) try { URL.revokeObjectURL(it.previewUrl) } catch { /* noop */ } })
 
   const resetMedia = () => {
     setGalleryItems((prev) => { revokeAll(prev); return [] })
     setVideoItems((prev) => { revokeAll(prev); return [] })
-    if (thumbnailPreview) try { URL.revokeObjectURL(thumbnailPreview) } catch { }
+    if (thumbnailPreview) try { URL.revokeObjectURL(thumbnailPreview) } catch { /* noop */ }
     setThumbnailPreview(null)
     setThumbnailFile(null)
     setReplaceImages(false)
@@ -85,7 +120,7 @@ export default function ProjectsManager() {
 
   const handleThumbnailChange = (e) => {
     const file = e.target.files?.[0] || null
-    if (thumbnailPreview) try { URL.revokeObjectURL(thumbnailPreview) } catch { }
+    if (thumbnailPreview) try { URL.revokeObjectURL(thumbnailPreview) } catch { /* noop */ }
     setThumbnailFile(file)
     setThumbnailPreview(file ? URL.createObjectURL(file) : null)
   }
@@ -104,7 +139,7 @@ export default function ProjectsManager() {
       const existingKeys = new Set(prev.map((it) => it.key))
       // revoke preview URLs for duplicates before discarding
       newItems.filter((it) => existingKeys.has(it.key)).forEach((it) => {
-        try { URL.revokeObjectURL(it.previewUrl) } catch { }
+        try { URL.revokeObjectURL(it.previewUrl) } catch { /* noop */ }
       })
       return [...prev, ...newItems.filter((it) => !existingKeys.has(it.key))]
     })
@@ -118,7 +153,7 @@ export default function ProjectsManager() {
   const removeGalleryItem = (key) => {
     setGalleryItems((prev) => {
       const target = prev.find((it) => it.key === key)
-      if (target?.previewUrl) try { URL.revokeObjectURL(target.previewUrl) } catch { }
+      if (target?.previewUrl) try { URL.revokeObjectURL(target.previewUrl) } catch { /* noop */ }
       return prev.filter((it) => it.key !== key)
     })
   }
@@ -136,7 +171,7 @@ export default function ProjectsManager() {
     setVideoItems((prev) => {
       const existingKeys = new Set(prev.map((it) => it.key))
       newItems.filter((it) => existingKeys.has(it.key)).forEach((it) => {
-        try { URL.revokeObjectURL(it.previewUrl) } catch { }
+        try { URL.revokeObjectURL(it.previewUrl) } catch { /* noop */ }
       })
       return [...prev, ...newItems.filter((it) => !existingKeys.has(it.key))]
     })
@@ -150,27 +185,40 @@ export default function ProjectsManager() {
   const removeVideoItem = (key) => {
     setVideoItems((prev) => {
       const target = prev.find((it) => it.key === key)
-      if (target?.previewUrl) try { URL.revokeObjectURL(target.previewUrl) } catch { }
+      if (target?.previewUrl) try { URL.revokeObjectURL(target.previewUrl) } catch { /* noop */ }
       return prev.filter((it) => it.key !== key)
     })
   }
 
   // ── Submit ──
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this project? This cannot be undone.')) return
+  const handleDelete = (id) => {
+    setDeleteTargetId(id)
+  }
+
+  const confirmDelete = async () => {
+    const project = projects.find((p) => p.id === deleteTargetId)
+    if (!project) return
+    setDeleting(true)
     try {
-      const project = projects.find((p) => p.id === id)
       await apiService.deleteProject(project.slug)
-      setProjects(projects.filter((p) => p.id !== id))
+      setProjects((prev) => prev.filter((p) => p.id !== deleteTargetId))
+      setDeleteTargetId(null)
+      showToast('Project deleted')
     } catch (error) {
       console.error('Failed to delete project:', error)
-      alert('Failed to delete project')
+      showToast('Failed to delete project', 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (submitting) return
+    if (!editingId && !thumbnailFile) {
+      showToast('Thumbnail is required', 'error')
+      return
+    }
     setSubmitting(true)
     try {
       const targetOrder = formData.order
@@ -209,9 +257,10 @@ export default function ProjectsManager() {
       if (editingId) {
         const project = projects.find((p) => p.id === editingId)
         await apiService.updateProject(project.slug, data)
+        showToast('Project updated')
       } else {
-        if (!thumbnailFile) { alert('Thumbnail is required'); setSubmitting(false); return }
         await apiService.createProject(data)
+        showToast('Project created')
       }
 
       handleClose()
@@ -219,11 +268,73 @@ export default function ProjectsManager() {
     } catch (error) {
       console.error('Failed to save project:', error)
       if (error?.response?.data) console.error('Save error:', error.response.data)
-      alert('Failed to save project')
+      showToast('Failed to save project', 'error')
     } finally {
       setSubmitting(false)
     }
   }
+
+  const handleToggleField = async (project, field) => {
+    const key = `${project.id}:${field}`
+    if (togglingKey === key) return
+    const nextVal = !project[field]
+    setTogglingKey(key)
+    setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, [field]: nextVal } : p)))
+    try {
+      await apiService.updateProject(project.slug, { [field]: nextVal })
+      showToast(
+        field === 'is_published'
+          ? (nextVal ? `"${project.title}" published` : `"${project.title}" moved to draft`)
+          : (nextVal ? `"${project.title}" marked featured` : `"${project.title}" removed from featured`)
+      )
+    } catch {
+      setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, [field]: !nextVal } : p)))
+      showToast('Failed to update project', 'error')
+    } finally {
+      setTogglingKey(null)
+    }
+  }
+
+  const handleReorder = async (fromIdx, toIdx) => {
+    if (reordering || toIdx < 0 || toIdx >= projects.length) return
+    const nextList = [...projects]
+    const [moved] = nextList.splice(fromIdx, 1)
+    nextList.splice(toIdx, 0, moved)
+    const normalized = nextList.map((p, idx) => ({ ...p, order: idx + 1 }))
+    const prevList = projects
+    setReordering(true)
+    setProjects(normalized)
+    try {
+      const changed = normalized.filter((p) => {
+        const prev = prevList.find((x) => x.id === p.id)
+        return prev && prev.order !== p.order
+      })
+      for (const p of changed) {
+        await apiService.updateProject(p.slug, { order: p.order })
+      }
+      showToast('Project order updated')
+    } catch {
+      setProjects(prevList)
+      showToast('Failed to reorder projects', 'error')
+    } finally {
+      setReordering(false)
+    }
+  }
+
+  const filteredProjects = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return projects.filter((p) => {
+      if (statusFilter === 'live' && !p.is_published) return false
+      if (statusFilter === 'draft' && p.is_published) return false
+      if (statusFilter === 'featured' && !p.is_featured) return false
+      if (q && !(p.title || '').toLowerCase().includes(q) && !(p.project_type || '').toLowerCase().includes(q)) {
+        return false
+      }
+      return true
+    })
+  }, [projects, search, statusFilter])
+
+  const isFiltered = Boolean(search.trim() || statusFilter !== 'all')
 
   const columns = [
     {
@@ -237,24 +348,41 @@ export default function ProjectsManager() {
     {
       key: 'project_type',
       label: 'Type',
-      render: (val) => (
-        <span className={`badge ${val === 'live' ? 'badge--blue' : 'badge--purple'}`}>
-          {val === 'live' ? 'Live' : 'Gallery'}
-        </span>
-      ),
+      render: (val) => {
+        const meta = PROJECT_TYPE_BADGE[val] || { label: val || 'Project', cls: 'badge--gray' }
+        return <span className={`badge ${meta.cls}`}>{meta.label}</span>
+      },
     },
     {
       key: 'is_featured',
       label: 'Featured',
-      render: (val) => (
-        <span className={`badge ${val ? 'badge--orange' : 'badge--gray'}`}>{val ? 'Yes' : '—'}</span>
+      render: (val, row) => (
+        <button
+          type="button"
+          className={`badge badge-toggle ${val ? 'badge--orange' : 'badge--gray'}`}
+          onClick={() => handleToggleField(row, 'is_featured')}
+          disabled={togglingKey === `${row.id}:is_featured`}
+          title={val ? 'Click to unfeature' : 'Click to feature'}
+          aria-pressed={!!val}
+        >
+          {val ? 'Featured' : 'Standard'}
+        </button>
       ),
     },
     {
       key: 'is_published',
       label: 'Status',
-      render: (val) => (
-        <span className={`badge ${val ? 'badge--green' : 'badge--gray'}`}>{val ? 'Live' : 'Draft'}</span>
+      render: (val, row) => (
+        <button
+          type="button"
+          className={`badge badge-toggle ${val ? 'badge--green' : 'badge--gray'}`}
+          onClick={() => handleToggleField(row, 'is_published')}
+          disabled={togglingKey === `${row.id}:is_published`}
+          title={val ? 'Click to switch to Draft' : 'Click to publish Live'}
+          aria-pressed={!!val}
+        >
+          {val ? 'Live' : 'Draft'}
+        </button>
       ),
     },
   ]
@@ -262,23 +390,87 @@ export default function ProjectsManager() {
   const existingImages = formData.image_items || []
   const existingVideos = formData.video_items || []
   const isLocal = formData.project_type === 'local'
+  const deleteProject = projects.find((p) => p.id === deleteTargetId)
 
   return (
     <div className="manager">
-      <div className="manager-header">
-        <div className="manager-header-left">
-          <Globe size={22} color="#6366f1" />
-          <h2>Projects</h2>
+      <div className="manager-toolbar">
+        <div className="manager-toolbar-left">
+          <div className="manager-search">
+            <Search size={14} className="manager-search__icon" aria-hidden="true" />
+            <input
+              type="search"
+              className="manager-search__input"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search projects…"
+              aria-label="Search projects"
+            />
+            {search && (
+              <button
+                type="button"
+                className="manager-search__clear"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <div className="manager-filter-pills" role="group" aria-label="Filter projects">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'live', label: 'Live' },
+              { id: 'draft', label: 'Draft' },
+              { id: 'featured', label: 'Featured' },
+            ].map((pill) => (
+              <button
+                key={pill.id}
+                type="button"
+                className={`manager-filter-pill${statusFilter === pill.id ? ' is-active' : ''}`}
+                aria-pressed={statusFilter === pill.id}
+                onClick={() => setStatusFilter(pill.id)}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+
           {!loading && projects.length > 0 && (
-            <span className="skill-count-badge">{projects.length}</span>
+            <span className="manager-result-meta">
+              {isFiltered ? `${filteredProjects.length} of ${projects.length}` : `${projects.length} total`}
+            </span>
           )}
         </div>
-        <button className="btn-primary" onClick={handleAdd}>
+
+        <button type="button" className="btn-primary" onClick={handleAdd}>
           <Plus size={16} /> Add Project
         </button>
       </div>
 
-      <Table columns={columns} data={projects} onEdit={handleEdit} onDelete={handleDelete} loading={loading} />
+      <Table
+        columns={columns}
+        data={filteredProjects}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onMoveUp={!isFiltered && projects.length > 1 ? (idx) => handleReorder(idx, idx - 1) : undefined}
+        onMoveDown={!isFiltered && projects.length > 1 ? (idx) => handleReorder(idx, idx + 1) : undefined}
+        reordering={reordering}
+        loading={loading}
+        emptyIcon={Globe}
+        emptyText={isFiltered ? 'No matching projects' : 'No projects yet'}
+        emptyDescription={
+          isFiltered
+            ? 'Try adjusting your search query or clearing active filters.'
+            : 'Add your first project to showcase your work on the portfolio.'
+        }
+        emptyAction={
+          isFiltered
+            ? { label: 'Clear Filters', onClick: () => { setSearch(''); setStatusFilter('all') } }
+            : { label: 'Add Project', onClick: handleAdd }
+        }
+      />
 
       {showForm && (
         <ModalForm
@@ -331,27 +523,24 @@ export default function ProjectsManager() {
             <span className="form-section__label">Settings</span>
           </div>
 
-          <div className="form-field">
-            <label>Project Type</label>
-            <select
+          <div className="form-grid-2">
+            <FormField
+              label="Project Type"
+              name="project_type"
+              type="select"
               value={formData.project_type}
               onChange={(e) => setFormData({ ...formData, project_type: e.target.value })}
-            >
-              <option value="live">Live Site / Web App</option>
-              <option value="mobile">Mobile App</option>
-              <option value="desktop">Desktop App</option>
-              <option value="api">API / Backend</option>
-              <option value="design">UI/UX Design</option>
-              <option value="local">Local Project / Gallery</option>
-            </select>
+              options={PROJECT_TYPE_OPTIONS}
+            />
+            <FormField
+              label="Display Order"
+              name="order"
+              type="number"
+              min={0}
+              value={formData.order}
+              onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value, 10) || 0 })}
+            />
           </div>
-
-          <FormField
-            label="Display Order"
-            type="number"
-            value={formData.order}
-            onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-          />
 
           <div className="form-field">
             <label>Visibility</label>
@@ -399,7 +588,7 @@ export default function ProjectsManager() {
                 <input type="file" accept="image/*" onChange={handleThumbnailChange} />
                 {thumbnailPreview && (
                   <button type="button" className="btn-ghost-sm" onClick={() => {
-                    try { URL.revokeObjectURL(thumbnailPreview) } catch { }
+                    try { URL.revokeObjectURL(thumbnailPreview) } catch { /* noop */ }
                     setThumbnailPreview(null)
                     setThumbnailFile(null)
                   }}>
@@ -427,7 +616,7 @@ export default function ProjectsManager() {
                     </button>
                   </div>
                   {replaceImages ? (
-                    <p style={{ fontSize: 12, color: '#dc2626', margin: 0 }}>
+                    <p className="manager-inline-warning">
                       Existing images will be deleted when you save.
                     </p>
                   ) : (
@@ -497,7 +686,7 @@ export default function ProjectsManager() {
                     </button>
                   </div>
                   {replaceVideos ? (
-                    <p style={{ fontSize: 12, color: '#dc2626', margin: 0 }}>
+                    <p className="manager-inline-warning">
                       Existing videos will be deleted when you save.
                     </p>
                   ) : (
@@ -551,6 +740,18 @@ export default function ProjectsManager() {
           )}
         </ModalForm>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTargetId}
+        title="Delete project?"
+        message={deleteProject ? `Permanently delete "${deleteProject.title}"? This cannot be undone.` : 'This cannot be undone.'}
+        confirmText="Delete"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+
+      <AdminToast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   )
 }

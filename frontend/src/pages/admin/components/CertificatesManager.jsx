@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Plus, Award, X, FileText } from 'lucide-react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Plus, Award, X, FileText, Search } from 'lucide-react'
 import { apiService, API_BASE_URL } from '../../../services/apiService'
-import { FormField, ModalForm, Table } from './Form'
+import { AdminToast, ConfirmDialog, FormField, ModalForm, Table } from './Form'
 import './Manager.css'
 
 const ACCEPT = 'image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -26,28 +26,38 @@ function fileType(urlOrFile) {
 function FileThumb({ src, file, onRemove }) {
   const type = file ? fileType(file) : fileType(src)
   const url = src ? normalizeUrl(src) : null
+  const objectUrl = useMemo(
+    () => (file && type === 'image' ? URL.createObjectURL(file) : null),
+    [file, type]
+  )
+
+  useEffect(() => {
+    if (!objectUrl) return undefined
+    return () => {
+      try { URL.revokeObjectURL(objectUrl) } catch { /* noop */ }
+    }
+  }, [objectUrl])
 
   const inner = type === 'image' ? (
     <img
-      src={file ? URL.createObjectURL(file) : url}
+      src={file ? objectUrl : url}
       alt=""
-      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
+      className="cert-file-thumb__img"
     />
   ) : (
-    <div style={{
-      width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 8,
-      background: type === 'pdf' ? '#fff1f0' : '#eff6ff',
-      border: `1.5px solid ${type === 'pdf' ? '#fca5a5' : '#93c5fd'}`,
-    }}>
-      <FileText size={22} color={type === 'pdf' ? '#dc2626' : '#2563eb'} />
-      <span style={{ fontSize: 10, fontWeight: 700, color: type === 'pdf' ? '#dc2626' : '#2563eb', letterSpacing: 0.5 }}>
+    <div className={`cert-file-thumb__doc cert-file-thumb__doc--${type}`}>
+      <FileText size={20} />
+      <span className="cert-file-thumb__ext">
         {type === 'pdf' ? 'PDF' : 'DOC'}
       </span>
       {url && (
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: 10, color: type === 'pdf' ? '#dc2626' : '#2563eb', textDecoration: 'underline' }}
-          onClick={e => e.stopPropagation()}>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cert-file-thumb__link"
+          onClick={e => e.stopPropagation()}
+        >
           View
         </a>
       )}
@@ -55,20 +65,16 @@ function FileThumb({ src, file, onRemove }) {
   )
 
   return (
-    <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
+    <div className="cert-file-thumb">
       {inner}
       {onRemove && (
         <button
           type="button"
+          className="cert-file-thumb__remove"
           onClick={onRemove}
-          style={{
-            position: 'absolute', top: -6, right: -6,
-            width: 20, height: 20, borderRadius: '50%',
-            background: '#ef4444', border: 'none', cursor: 'pointer',
-            display: 'grid', placeItems: 'center', padding: 0,
-          }}
+          aria-label="Remove file"
         >
-          <X size={11} color="#fff" />
+          <X size={11} />
         </button>
       )}
     </div>
@@ -91,21 +97,38 @@ export default function CertificatesManager() {
   const [existingFiles, setExistingFiles] = useState([])   // {id, file: url, ...}
   const [pendingFiles, setPendingFiles] = useState([])     // {tempId, file: File}
   const [submitting, setSubmitting] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [togglingId, setTogglingId] = useState(null)
+  const [reordering, setReordering] = useState(false)
+  const [search, setSearch] = useState('')
+  const [featuredOnly, setFeaturedOnly] = useState(false)
+  const [toast, setToast] = useState(null)
   const fileInputRef = useRef(null)
+  const toastTimer = useRef(null)
 
-  useEffect(() => { load() }, [])
+  const showToast = useCallback((message, type = 'success') => {
+    clearTimeout(toastTimer.current)
+    setToast({ message, type })
+    toastTimer.current = setTimeout(() => setToast(null), 3200)
+  }, [])
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true)
       const res = await apiService.getCertificates()
       setCerts(res.data)
     } catch {
-      // silently ignore
+      showToast('Failed to load certificates.', 'error')
     } finally {
       setLoading(false)
     }
-  }
+  }, [showToast])
+
+  useEffect(() => {
+    load()
+    return () => clearTimeout(toastTimer.current)
+  }, [load])
 
   const openAdd = () => {
     setFormData({ ...EMPTY, order: certs.length === 0 ? 1 : Math.max(...certs.map(c => c.order)) + 1 })
@@ -133,13 +156,18 @@ export default function CertificatesManager() {
     setShowForm(true)
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this certificate?')) return
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return
+    setDeleting(true)
     try {
-      await apiService.deleteCertificate(id)
-      setCerts(prev => prev.filter(c => c.id !== id))
+      await apiService.deleteCertificate(deleteTargetId)
+      setCerts(prev => prev.filter(c => c.id !== deleteTargetId))
+      setDeleteTargetId(null)
+      showToast('Certificate deleted')
     } catch {
-      alert('Failed to delete certificate.')
+      showToast('Failed to delete certificate.', 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -156,13 +184,15 @@ export default function CertificatesManager() {
     try {
       await apiService.deleteCertificateFile(id)
       setExistingFiles(prev => prev.filter(f => f.id !== id))
+      showToast('File removed')
     } catch {
-      alert('Failed to remove file.')
+      showToast('Failed to remove file.', 'error')
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (submitting) return
     setSubmitting(true)
     try {
       const targetOrder = formData.order
@@ -181,19 +211,76 @@ export default function CertificatesManager() {
 
       if (editingId) {
         await apiService.updateCertificate(editingId, fd)
+        showToast('Certificate updated')
       } else {
         await apiService.createCertificate(fd)
+        showToast('Certificate added')
       }
       setShowForm(false)
       load()
     } catch (err) {
-      alert('Failed to save. ' + (err?.response?.data ? JSON.stringify(err.response.data) : err.message))
+      showToast('Failed to save: ' + (err?.response?.data ? JSON.stringify(err.response.data) : err.message), 'error')
     } finally {
       setSubmitting(false)
     }
   }
 
   const set = (key, value) => setFormData(prev => ({ ...prev, [key]: value }))
+
+  const handleToggleFeatured = async (cert) => {
+    if (togglingId === cert.id) return
+    const nextVal = !cert.is_featured
+    setTogglingId(cert.id)
+    setCerts((prev) => prev.map((c) => (c.id === cert.id ? { ...c, is_featured: nextVal } : c)))
+    try {
+      await apiService.updateCertificate(cert.id, { is_featured: nextVal })
+      showToast(nextVal ? `"${cert.title}" marked featured` : `"${cert.title}" removed from featured`)
+    } catch {
+      setCerts((prev) => prev.map((c) => (c.id === cert.id ? { ...c, is_featured: !nextVal } : c)))
+      showToast('Failed to update certificate.', 'error')
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  const handleReorder = async (fromIdx, toIdx) => {
+    if (reordering || toIdx < 0 || toIdx >= certs.length) return
+    const nextList = [...certs]
+    const [moved] = nextList.splice(fromIdx, 1)
+    nextList.splice(toIdx, 0, moved)
+    const normalized = nextList.map((c, idx) => ({ ...c, order: idx + 1 }))
+    const prevList = certs
+    setReordering(true)
+    setCerts(normalized)
+    try {
+      const changed = normalized.filter((c) => {
+        const prev = prevList.find((x) => x.id === c.id)
+        return prev && prev.order !== c.order
+      })
+      for (const c of changed) {
+        await apiService.updateCertificate(c.id, { order: c.order })
+      }
+      showToast('Certificate order updated')
+    } catch {
+      setCerts(prevList)
+      showToast('Failed to reorder certificates.', 'error')
+    } finally {
+      setReordering(false)
+    }
+  }
+
+  const filteredCerts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return certs.filter((c) => {
+      if (featuredOnly && !c.is_featured) return false
+      if (q && !(c.title || '').toLowerCase().includes(q) && !(c.issuer || '').toLowerCase().includes(q)) {
+        return false
+      }
+      return true
+    })
+  }, [certs, search, featuredOnly])
+
+  const isFiltered = Boolean(search.trim() || featuredOnly)
 
   const columns = [
     {
@@ -202,17 +289,17 @@ export default function CertificatesManager() {
       render: (files) => {
         const first = files?.[0]
         if (!first) return (
-          <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f1f5f9', display: 'grid', placeItems: 'center' }}>
-            <Award size={18} color="#94a3b8" />
+          <div className="cert-table-icon">
+            <Award size={17} />
           </div>
         )
         const type = first.file_type || fileType(first.file)
         if (type === 'image') return (
-          <img src={normalizeUrl(first.file)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
+          <img src={normalizeUrl(first.file)} alt="" className="table-thumb" />
         )
         return (
-          <div style={{ width: 40, height: 40, borderRadius: 8, background: type === 'pdf' ? '#fff1f0' : '#eff6ff', display: 'grid', placeItems: 'center', border: `1px solid ${type === 'pdf' ? '#fca5a5' : '#93c5fd'}` }}>
-            <FileText size={16} color={type === 'pdf' ? '#dc2626' : '#2563eb'} />
+          <div className={`cert-table-icon cert-table-icon--${type}`}>
+            <FileText size={16} />
           </div>
         )
       },
@@ -224,7 +311,7 @@ export default function CertificatesManager() {
       key: 'files',
       label: 'Files',
       render: (files) => (
-        <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>
+        <span className="badge badge--gray">
           {files?.length || 0} file{files?.length !== 1 ? 's' : ''}
         </span>
       ),
@@ -232,35 +319,102 @@ export default function CertificatesManager() {
     {
       key: 'is_featured',
       label: 'Featured',
-      render: (val) => (
-        <span style={{
-          display: 'inline-block', padding: '2px 10px', borderRadius: 999,
-          fontSize: 11, fontWeight: 700,
-          background: val ? '#ede9fe' : '#f1f5f9',
-          color: val ? '#7c3aed' : '#94a3b8',
-        }}>
-          {val ? 'Yes' : 'No'}
-        </span>
+      render: (val, row) => (
+        <button
+          type="button"
+          className={`badge badge-toggle ${val ? 'badge--purple' : 'badge--gray'}`}
+          onClick={() => handleToggleFeatured(row)}
+          disabled={togglingId === row.id}
+          title={val ? 'Click to unfeature' : 'Click to feature'}
+          aria-pressed={!!val}
+        >
+          {val ? 'Featured' : 'Standard'}
+        </button>
       ),
     },
   ]
 
+  const deleteTarget = certs.find(c => c.id === deleteTargetId)
+
   return (
     <div className="manager">
-      <div className="manager-header">
-        <div className="manager-header-left">
-          <Award size={22} color="#6366f1" />
-          <h2>Certificates</h2>
+      <div className="manager-toolbar">
+        <div className="manager-toolbar-left">
+          <div className="manager-search">
+            <Search size={14} className="manager-search__icon" aria-hidden="true" />
+            <input
+              type="search"
+              className="manager-search__input"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search certificates…"
+              aria-label="Search certificates"
+            />
+            {search && (
+              <button
+                type="button"
+                className="manager-search__clear"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <div className="manager-filter-pills" role="group" aria-label="Filter certificates">
+            <button
+              type="button"
+              className={`manager-filter-pill${!featuredOnly ? ' is-active' : ''}`}
+              aria-pressed={!featuredOnly}
+              onClick={() => setFeaturedOnly(false)}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              className={`manager-filter-pill${featuredOnly ? ' is-active' : ''}`}
+              aria-pressed={featuredOnly}
+              onClick={() => setFeaturedOnly(true)}
+            >
+              Featured
+            </button>
+          </div>
+
           {!loading && certs.length > 0 && (
-            <span className="skill-count-badge">{certs.length}</span>
+            <span className="manager-result-meta">
+              {isFiltered ? `${filteredCerts.length} of ${certs.length}` : `${certs.length} total`}
+            </span>
           )}
         </div>
-        <button className="btn-primary" onClick={openAdd}>
-          <Plus size={18} /> Add Certificate
+
+        <button type="button" className="btn-primary" onClick={openAdd}>
+          <Plus size={16} /> Add Certificate
         </button>
       </div>
 
-      <Table columns={columns} data={certs} onEdit={openEdit} onDelete={handleDelete} loading={loading} />
+      <Table
+        columns={columns}
+        data={filteredCerts}
+        onEdit={openEdit}
+        onDelete={setDeleteTargetId}
+        onMoveUp={!isFiltered && certs.length > 1 ? (idx) => handleReorder(idx, idx - 1) : undefined}
+        onMoveDown={!isFiltered && certs.length > 1 ? (idx) => handleReorder(idx, idx + 1) : undefined}
+        reordering={reordering}
+        loading={loading}
+        emptyIcon={Award}
+        emptyText={isFiltered ? 'No matching certificates' : 'No certificates yet'}
+        emptyDescription={
+          isFiltered
+            ? 'Try adjusting your search or clearing the filter.'
+            : 'Add certifications and credentials to display on your portfolio.'
+        }
+        emptyAction={
+          isFiltered
+            ? { label: 'Clear Filters', onClick: () => { setSearch(''); setFeaturedOnly(false) } }
+            : { label: 'Add Certificate', onClick: openAdd }
+        }
+      />
 
       {showForm && (
         <ModalForm
@@ -271,50 +425,48 @@ export default function CertificatesManager() {
           submitting={submitting}
         >
           {/* Certificate details */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <FormField label="Certificate Title" value={formData.title} onChange={e => set('title', e.target.value)} required />
+          <div className="form-grid-2">
+            <div className="form-grid-span">
+              <FormField label="Certificate Title" name="title" value={formData.title} onChange={e => set('title', e.target.value)} required />
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <FormField label="Issuing Organization" value={formData.issuer} onChange={e => set('issuer', e.target.value)} required />
+            <div className="form-grid-span">
+              <FormField label="Issuing Organization" name="issuer" value={formData.issuer} onChange={e => set('issuer', e.target.value)} required />
             </div>
-            <FormField label="Issue Date" type="date" value={formData.issue_date} onChange={e => set('issue_date', e.target.value)} required />
-            <FormField label="Expiry Date (blank = no expiry)" type="date" value={formData.expiry_date} onChange={e => set('expiry_date', e.target.value)} />
-            <FormField label="Credential ID" value={formData.credential_id} onChange={e => set('credential_id', e.target.value)} />
-            <FormField label="Credential URL" type="url" value={formData.credential_url} onChange={e => set('credential_url', e.target.value)} />
+            <FormField label="Issue Date" name="issue_date" type="date" value={formData.issue_date} onChange={e => set('issue_date', e.target.value)} required />
+            <FormField label="Expiry Date (optional)" name="expiry_date" type="date" value={formData.expiry_date} onChange={e => set('expiry_date', e.target.value)} />
+            <FormField label="Credential ID" name="credential_id" value={formData.credential_id} onChange={e => set('credential_id', e.target.value)} />
+            <FormField label="Credential URL" name="credential_url" type="url" value={formData.credential_url} onChange={e => set('credential_url', e.target.value)} />
           </div>
 
           <FormField
             label="Description (optional)"
+            name="description"
             type="markdown"
             value={formData.description}
             onChange={e => set('description', e.target.value)}
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-            <FormField label="Display Order" type="number" value={formData.order} onChange={e => set('order', parseInt(e.target.value) || 0)} />
-            <div style={{ paddingTop: 28 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+          <div className="form-grid-2">
+            <FormField label="Display Order" name="order" type="number" min={0} value={formData.order} onChange={e => set('order', parseInt(e.target.value, 10) || 0)} />
+            <div className="cert-featured-cell">
+              <label className="toggle-label">
                 <input
                   type="checkbox"
                   checked={formData.is_featured}
                   onChange={e => set('is_featured', e.target.checked)}
-                  style={{ width: 16, height: 16, accentColor: '#6366f1' }}
                 />
-                <span style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>Featured certificate</span>
+                <span className="toggle-track" />
+                <span className="toggle-text">Featured certificate</span>
               </label>
             </div>
           </div>
 
           {/* Files section */}
-          <div style={{ marginTop: 8 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
-              Certificate Files
-            </label>
+          <div className="cert-files-section">
+            <span className="cert-files-label">Certificate Files</span>
 
-            {/* File grid */}
             {(existingFiles.length > 0 || pendingFiles.length > 0) && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+              <div className="cert-files-grid">
                 {existingFiles.map(f => (
                   <FileThumb key={f.id} src={f.file} onRemove={() => removeExisting(f.id)} />
                 ))}
@@ -324,18 +476,12 @@ export default function CertificatesManager() {
               </div>
             )}
 
-            {/* Add files button */}
             <button
               type="button"
+              className="cert-add-files-btn"
               onClick={() => fileInputRef.current?.click()}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 16px', borderRadius: 10, border: '1.5px dashed #cbd5e1',
-                background: '#f8fafc', cursor: 'pointer', fontSize: 13,
-                color: '#64748b', fontWeight: 500, width: '100%', justifyContent: 'center',
-              }}
             >
-              <Plus size={16} /> Add files (images, PDF, Word)
+              <Plus size={15} /> Add files (images, PDF, Word)
             </button>
             <input
               ref={fileInputRef}
@@ -345,10 +491,22 @@ export default function CertificatesManager() {
               onChange={handleFilesChange}
               style={{ display: 'none' }}
             />
-            <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>Accepted: JPG, PNG, GIF, PDF, DOC, DOCX · Multiple files allowed</p>
+            <p className="cert-files-hint">Accepted: JPG, PNG, GIF, PDF, DOC, DOCX · Multiple files allowed</p>
           </div>
         </ModalForm>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTargetId}
+        title="Delete certificate?"
+        message={deleteTarget ? `Permanently delete "${deleteTarget.title}" and its attached files?` : ''}
+        confirmText="Delete"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+
+      <AdminToast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   )
 }

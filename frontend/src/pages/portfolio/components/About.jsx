@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
+import React, { useMemo } from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
-import { API_BASE_URL } from '../../../services/apiService'
-import ResumeViewer from './ResumeViewer'
+import { useReveal } from '../../../hooks/useReveal'
 import Prose from '../../../components/Prose'
 import './About.css'
 
@@ -15,18 +14,34 @@ function hasVisibleText(val) {
     .trim().length > 0
 }
 
-export default function About({ about }) {
+function calcTotalExperienceLabel(experiences) {
+  if (!Array.isArray(experiences) || experiences.length === 0) return null
+  let minStart = Infinity
+  let maxEnd = 0
+  const now = Date.now()
+  for (const exp of experiences) {
+    if (!exp?.start_date) continue
+    const s = new Date(exp.start_date + 'T12:00:00').getTime()
+    const e = exp.is_current || !exp.end_date ? now : new Date(exp.end_date + 'T12:00:00').getTime()
+    if (!Number.isNaN(s) && s < minStart) minStart = s
+    if (!Number.isNaN(e) && e > maxEnd) maxEnd = e
+  }
+  if (!Number.isFinite(minStart) || maxEnd <= minStart) return null
+  const months = Math.max(1, Math.round((maxEnd - minStart) / (1000 * 60 * 60 * 24 * 30.4375)))
+  const years = Math.floor(months / 12)
+  if (years >= 1) return `${years}+ yr${years > 1 ? 's' : ''}`
+  return `${months} mo`
+}
+
+export default function About({
+  about,
+  projectsCount = 0,
+  experiences = [],
+  certificatesCount = 0,
+}) {
   const { config: seasonConfig } = useSeasonContext()
   const { theme } = useTheme()
-  const [showResume, setShowResume] = useState(false)
-
-  const resumeFileUrl = (() => {
-    const src = about?.resume_file
-    if (!src) return ''
-    if (/^https?:\/\//i.test(src)) return src
-    const origin = new URL(API_BASE_URL).origin
-    return `${origin}${src.startsWith('/') ? '' : '/'}${src}`
-  })()
+  const [revealRef, visible] = useReveal()
 
   const colors = theme ? {
     primary:    theme.primary_color    || seasonConfig?.colors?.primary    || '#1a472a',
@@ -46,11 +61,21 @@ export default function About({ about }) {
   const showBackground = hasVisibleText(about?.about_background)
   const showSpecialization = hasVisibleText(about?.about_specialization)
   const showAboutText = hasVisibleText(about?.about_text)
-  const hasContent = showIntro || showBackground || showSpecialization || showAboutText || Boolean(resumeFileUrl)
+  const hasDetailCards = showBackground || showSpecialization || showAboutText
+
+  const quickFacts = useMemo(() => {
+    const list = []
+    const expLabel = calcTotalExperienceLabel(experiences)
+    if (expLabel) list.push({ value: expLabel, label: 'Experience' })
+    if (projectsCount > 0) list.push({ value: String(projectsCount), label: projectsCount === 1 ? 'Project' : 'Projects' })
+    if (certificatesCount > 0) list.push({ value: String(certificatesCount), label: certificatesCount === 1 ? 'Credential' : 'Credentials' })
+    return list
+  }, [experiences, projectsCount, certificatesCount])
 
   return (
     <section
-      className="about"
+      ref={revealRef}
+      className={`about pv-reveal${visible ? ' pv-reveal--visible' : ''}`}
       id="about"
       style={{
         '--ap': colors.primary,
@@ -61,83 +86,68 @@ export default function About({ about }) {
       }}
     >
       <div className="about-inner">
-
-        <div className="about-heading">
-          <span className="about-label">About Me</span>
-          <h2 className="about-title">Who I Am</h2>
-          <p className="about-subtitle">
-            A little about my background and what drives me
-          </p>
-        </div>
-
-        {hasContent && (
-          <div className="about-content">
+        <div className={`about-layout${hasDetailCards ? '' : ' about-layout--single'}`}>
+          {/* ── Left column: editorial lead + metrics + resume ── */}
+          <div className="about-lead">
+            <div className="about-heading">
+              <span className="pv-section-eyebrow about-label">
+                <span className="pv-section-eyebrow-num">03</span>
+                <span>About</span>
+              </span>
+              <h2 className="about-title">Who I Am</h2>
+            </div>
 
             {showIntro && (
               <div className="about-intro-text">
-                <Prose style={{ color: colors.text }}>{about.about_intro}</Prose>
+                <Prose style={{ color: 'var(--theme-surface-text)' }}>{about.about_intro}</Prose>
               </div>
             )}
 
-            {showBackground && (
-              <div className="about-block">
-                <div className="about-block-label">Background</div>
-                <Prose style={{ color: colors.text }}>
-                  {about.about_background}
-                </Prose>
-              </div>
+            {quickFacts.length > 0 && (
+              <dl className="about-facts">
+                {quickFacts.map((fact) => (
+                  <div key={fact.label} className="about-fact">
+                    <dt>{fact.label}</dt>
+                    <dd>{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
             )}
-
-            {showSpecialization && (
-              <div className="about-block">
-                <div className="about-block-label">Specialization</div>
-                <Prose style={{ color: colors.text }}>
-                  {about.about_specialization}
-                </Prose>
-              </div>
-            )}
-
-            {showAboutText && (
-              <div className="about-block">
-                <Prose style={{ color: colors.text }}>
-                  {about.about_text}
-                </Prose>
-              </div>
-            )}
-
-            {resumeFileUrl && (
-              <div className="about-actions">
-                <button
-                  className="view-resume-btn"
-                  onClick={() => setShowResume(true)}
-                  style={{ backgroundColor: colors.primary, color: '#fff' }}
-                >
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2"
-                    strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                  </svg>
-                  View Resume
-                </button>
-              </div>
-            )}
-
           </div>
-        )}
 
+          {/* ── Right column: structured narrative cards ── */}
+          {hasDetailCards && (
+            <div className="about-content">
+              {showBackground && (
+                <div className="about-block">
+                  <div className="about-block-label">Background</div>
+                  <Prose style={{ color: 'var(--theme-text)' }}>
+                    {about.about_background}
+                  </Prose>
+                </div>
+              )}
+
+              {showSpecialization && (
+                <div className="about-block">
+                  <div className="about-block-label">Specialization</div>
+                  <Prose style={{ color: 'var(--theme-text)' }}>
+                    {about.about_specialization}
+                  </Prose>
+                </div>
+              )}
+
+              {showAboutText && (
+                <div className="about-block">
+                  <div className="about-block-label">Overview</div>
+                  <Prose style={{ color: 'var(--theme-text)' }}>
+                    {about.about_text}
+                  </Prose>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-
-      {showResume && (
-        <ResumeViewer
-          url={resumeFileUrl}
-          onClose={() => setShowResume(false)}
-          colors={colors}
-        />
-      )}
     </section>
   )
 }

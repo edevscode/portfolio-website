@@ -1,11 +1,12 @@
 import React from 'react'
+import { FileText, MapPin, ArrowUpRight } from 'lucide-react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
 import { API_BASE_URL } from '../../../services/apiService'
 import { safeHref } from '../../../utils/sanitize'
 import './Hero.css'
 
-export default function Hero({ about }) {
+export default function Hero({ about, socialLinks = [], hasResume = false, onOpenResume }) {
   const { config: seasonConfig } = useSeasonContext()
   const { theme } = useTheme()
 
@@ -39,6 +40,13 @@ export default function Hero({ about }) {
     text: about?.hero_cta_secondary_text || 'Get In Touch',
     href: safeHref(about?.hero_cta_secondary_link, '#contact'),
   }
+  const isExternal = (href) => /^https?:/i.test(href || '')
+  const ctaAlreadyMentionsResume = [primaryCta.text, secondaryCta.text]
+    .some((t) => /\b(resume|cv)\b/i.test(t || ''))
+
+  const quickLinks = (Array.isArray(socialLinks) ? socialLinks : [])
+    .filter((link) => link.is_visible !== false && safeHref(link.url))
+    .slice(0, 5)
 
   return (
     <section
@@ -52,16 +60,19 @@ export default function Hero({ about }) {
         '--hs': colors.secondary,
       }}
     >
-      {/* Background orbs */}
-      <span className="hero-orb hero-orb--1" aria-hidden="true" />
-      <span className="hero-orb hero-orb--2" aria-hidden="true" />
-      <span className="hero-orb hero-orb--3" aria-hidden="true" />
-
       <div className="hero-inner">
 
         {/* ── Left: text ── */}
         <div className="hero-text">
-          <span className="hero-greeting">Hello, I'm</span>
+          <div className="hero-meta-top">
+            <span className="hero-greeting">Hello, I&apos;m</span>
+            {about?.location && (
+              <span className="hero-location">
+                <MapPin size={12} aria-hidden="true" />
+                {about.location}
+              </span>
+            )}
+          </div>
 
           <h1 className="hero-name">
             {about?.hero_name || about?.hero_heading || 'Your Name'}
@@ -78,41 +89,76 @@ export default function Hero({ about }) {
           )}
 
           <div className="hero-ctas">
-            <a href={primaryCta.href} className="hero-btn-primary">
+            <a
+              href={primaryCta.href}
+              className="hero-btn-primary"
+              {...(isExternal(primaryCta.href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
               {primaryCta.text}
             </a>
-            <a href={secondaryCta.href} className="hero-btn-secondary">
+            <a
+              href={secondaryCta.href}
+              className="hero-btn-secondary"
+              {...(isExternal(secondaryCta.href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
               {secondaryCta.text}
             </a>
+            {hasResume && onOpenResume && !ctaAlreadyMentionsResume && (
+              <button
+                type="button"
+                className="hero-btn-resume"
+                onClick={onOpenResume}
+              >
+                <FileText size={15} aria-hidden="true" />
+                Resume
+              </button>
+            )}
           </div>
+
+          {quickLinks.length > 0 && (
+            <div className="hero-social-row" aria-label="Quick profile links">
+              {quickLinks.map((link) => (
+                <a
+                  key={link.id}
+                  href={safeHref(link.url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hero-social-link"
+                >
+                  <span>{link.platform}</span>
+                  <ArrowUpRight size={13} aria-hidden="true" />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Right: photo ── */}
         <div className="hero-visual">
-          <div className="hero-photo-frame">
-            {profileImageUrl ? (
-              <img
-                src={profileImageUrl}
-                alt={about?.hero_name || 'Profile'}
-                className="hero-photo"
-              />
-            ) : (
-              <div className="hero-photo hero-photo--empty" />
-            )}
+          <div className="hero-photo-wrap">
+            <div className="hero-photo-backdrop" aria-hidden="true" />
+            <div className="hero-photo-frame">
+              {profileImageUrl ? (
+                <img
+                  src={profileImageUrl}
+                  alt={about?.hero_name || 'Profile'}
+                  className="hero-photo"
+                />
+              ) : (
+                <div className="hero-photo hero-photo--empty" />
+              )}
+            </div>
           </div>
-          {/* Decorative floating chips */}
-          <span className="hero-deco hero-deco--tl" aria-hidden="true" />
-          <span className="hero-deco hero-deco--br" aria-hidden="true" />
         </div>
 
       </div>
 
       {/* Scroll indicator */}
-      <div className="hero-scroll" aria-hidden="true">
+      <a href="#projects" className="hero-scroll" aria-label="Scroll to projects">
         <span className="hero-scroll-track">
           <span className="hero-scroll-thumb" />
         </span>
-      </div>
+      </a>
     </section>
   )
 }

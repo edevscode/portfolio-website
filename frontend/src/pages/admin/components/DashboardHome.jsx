@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
-  Users, Briefcase, Star, Mail, Globe, Monitor, Smartphone, Tablet,
-  FileText, Award, Palette, ChevronRight, RefreshCw, Eye, TrendingUp,
-  MessageSquare, Zap, ExternalLink,
+  Briefcase, Mail, Globe, Monitor, Smartphone, Tablet,
+  FileText, Palette, ChevronRight, RefreshCw, Eye, TrendingUp,
+  MessageSquare, ArrowRight,
 } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import './DashboardHome.css'
@@ -43,29 +43,42 @@ function DeviceIcon({ type, size = 15 }) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, accent, onClick, loading }) {
+function StatCard({ icon, label, value, badge, onClick, loading }) {
+  const Icon = icon
   return (
-    <button className="dh-stat" onClick={onClick} style={{ '--dh-accent': accent }}>
-      <div className="dh-stat-icon"><Icon size={20} /></div>
+    <button type="button" className="dh-stat" onClick={onClick}>
+      <div className="dh-stat-top">
+        <div className="dh-stat-icon" aria-hidden="true">
+          <Icon size={17} />
+        </div>
+        {badge && <span className="dh-stat-pill">{badge}</span>}
+      </div>
       <div className="dh-stat-body">
         <div className="dh-stat-value">{loading ? '—' : value}</div>
-        <div className="dh-stat-label">{label}</div>
+        <div className="dh-stat-label">
+          <span>{label}</span>
+          <ChevronRight size={13} className="dh-stat-chevron" aria-hidden="true" />
+        </div>
       </div>
     </button>
   )
 }
 
-function QuickAction({ icon: Icon, label, path, accent }) {
+function QuickAction({ icon, label, subtitle, path }) {
+  const Icon = icon
   const navigate = useNavigate()
   return (
     <button
+      type="button"
       className="dh-qa"
       onClick={() => navigate(path)}
-      style={{ '--dh-accent': accent }}
     >
-      <div className="dh-qa-icon"><Icon size={18} /></div>
-      <span className="dh-qa-label">{label}</span>
-      <ChevronRight size={14} className="dh-qa-arrow" />
+      <div className="dh-qa-icon" aria-hidden="true"><Icon size={17} /></div>
+      <div className="dh-qa-copy">
+        <span className="dh-qa-label">{label}</span>
+        <span className="dh-qa-sub">{subtitle}</span>
+      </div>
+      <ChevronRight size={14} className="dh-qa-arrow" aria-hidden="true" />
     </button>
   )
 }
@@ -73,17 +86,14 @@ function QuickAction({ icon: Icon, label, path, accent }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  { label: 'Hero & About', icon: FileText,  path: '/admin/about',        accent: '#6366f1' },
-  { label: 'Skills',       icon: Zap,       path: '/admin/skills',        accent: '#f59e0b' },
-  { label: 'Projects',     icon: Briefcase, path: '/admin/projects',      accent: '#10b981' },
-  { label: 'Experience',   icon: Users,     path: '/admin/experience',    accent: '#3b82f6' },
-  { label: 'Certificates', icon: Award,     path: '/admin/certificates',  accent: '#8b5cf6' },
-  { label: 'Contact',      icon: Mail,      path: '/admin/messages',      accent: '#ef4444' },
-  { label: 'Themes',       icon: Palette,   path: '/admin/themes',        accent: '#ec4899' },
-  { label: 'Visitors',     icon: Eye,       path: '/admin/visitors',      accent: '#14b8a6' },
+  { label: 'Edit Hero & About', subtitle: 'Profile, bio & CV',    icon: FileText,  path: '/admin/about' },
+  { label: 'Manage Projects',   subtitle: 'Portfolio showcase',   icon: Briefcase, path: '/admin/projects' },
+  { label: 'Open Inbox',        subtitle: 'Messages & links',     icon: Mail,      path: '/admin/messages' },
+  { label: 'Customize Themes',  subtitle: 'Colors & presets',     icon: Palette,   path: '/admin/themes' },
 ]
 
 export default function DashboardHome() {
+  const navigate = useNavigate()
   const [stats, setStats]       = useState({ total: 0, today: 0, countries: [], devices: [] })
   const [visitors, setVisitors] = useState([])
   const [contacts, setContacts] = useState([])
@@ -138,23 +148,16 @@ export default function DashboardHome() {
       {/* ── Top banner ── */}
       <div className="dh-banner">
         <div className="dh-banner-text">
-          <h2>{greeting}, Admin 👋</h2>
-          <p>Here's an overview of your portfolio performance.</p>
+          <h2>{greeting}</h2>
+          <p>Portfolio traffic, published work, and inbox activity.</p>
         </div>
         <div className="dh-banner-actions">
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="dh-view-btn"
-          >
-            <ExternalLink size={14} />
-            View Portfolio
-          </a>
           <button
+            type="button"
             className={`dh-refresh-btn${refreshing ? ' spinning' : ''}`}
             onClick={() => load(true)}
-            title="Refresh"
+            title="Refresh overview"
+            aria-label="Refresh overview"
           >
             <RefreshCw size={15} />
           </button>
@@ -167,34 +170,38 @@ export default function DashboardHome() {
           icon={Eye}
           label="Total Visitors"
           value={stats.total.toLocaleString()}
-          accent="#14b8a6"
           loading={loading}
-          onClick={() => {}}
+          onClick={() => navigate('/admin/visitors')}
         />
         <StatCard
           icon={TrendingUp}
           label="Visitors Today"
           value={stats.today.toLocaleString()}
-          accent="#6366f1"
           loading={loading}
-          onClick={() => {}}
+          onClick={() => navigate('/admin/visitors')}
         />
         <StatCard
           icon={Briefcase}
           label="Projects"
           value={counts.projects}
-          accent="#10b981"
           loading={loading}
-          onClick={() => {}}
+          onClick={() => navigate('/admin/projects')}
         />
         <StatCard
           icon={MessageSquare}
-          label={`Messages${unread > 0 ? ` (${unread} new)` : ''}`}
+          label="Messages"
           value={contacts.length}
-          accent={unread > 0 ? '#ef4444' : '#f59e0b'}
+          badge={unread > 0 ? `${unread} unread` : null}
           loading={loading}
-          onClick={() => {}}
+          onClick={() => navigate('/admin/messages')}
         />
+      </div>
+
+      {/* ── Shortcuts ── */}
+      <div className="dh-qa-grid" aria-label="Workspace shortcuts">
+        {QUICK_ACTIONS.map(a => (
+          <QuickAction key={a.path} {...a} />
+        ))}
       </div>
 
       {/* ── Middle row: visitors + insights ── */}
@@ -206,6 +213,9 @@ export default function DashboardHome() {
             <Eye size={15} className="dh-card-icon" />
             <h3>Recent Visitors</h3>
             <span className="dh-card-badge">{visitors.length}</span>
+            <Link to="/admin/visitors" className="dh-card-link">
+              View all <ArrowRight size={13} />
+            </Link>
           </div>
 
           {loading ? (
@@ -285,20 +295,21 @@ export default function DashboardHome() {
             ) : (
               <div className="dh-device-list">
                 {[
-                  { key: 'desktop', icon: Monitor, label: 'Desktop', color: '#6366f1' },
-                  { key: 'mobile',  icon: Smartphone, label: 'Mobile',  color: '#10b981' },
-                  { key: 'tablet',  icon: Tablet, label: 'Tablet',  color: '#f59e0b' },
-                ].map(({ key, icon: Icon, label, color }) => {
-                  const count = deviceMap[key] || 0
+                  { key: 'desktop', icon: Monitor, label: 'Desktop', color: 'var(--admin-accent, #6366f1)' },
+                  { key: 'mobile',  icon: Smartphone, label: 'Mobile',  color: '#0f766e' },
+                  { key: 'tablet',  icon: Tablet, label: 'Tablet',  color: '#64748b' },
+                ].map((item) => {
+                  const Icon = item.icon
+                  const count = deviceMap[item.key] || 0
                   const pct = Math.round((count / totalDevices) * 100)
                   return (
-                    <div key={key} className="dh-device-row">
-                      <Icon size={14} style={{ color }} />
-                      <span className="dh-device-label">{label}</span>
+                    <div key={item.key} className="dh-device-row">
+                      <Icon size={14} style={{ color: item.color }} />
+                      <span className="dh-device-label">{item.label}</span>
                       <div className="dh-device-track">
                         <div
                           className="dh-device-fill"
-                          style={{ width: `${pct}%`, background: color }}
+                          style={{ width: `${pct}%`, background: item.color }}
                         />
                       </div>
                       <span className="dh-device-pct">{pct}%</span>
@@ -312,19 +323,6 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* ── Quick actions ── */}
-      <div className="dh-card dh-qa-section">
-        <div className="dh-card-head">
-          <Zap size={15} className="dh-card-icon" />
-          <h3>Quick Actions</h3>
-        </div>
-        <div className="dh-qa-grid">
-          {QUICK_ACTIONS.map(a => (
-            <QuickAction key={a.path} {...a} />
-          ))}
-        </div>
-      </div>
-
       {/* ── Recent messages ── */}
       {contacts.length > 0 && (
         <div className="dh-card dh-messages">
@@ -332,19 +330,27 @@ export default function DashboardHome() {
             <Mail size={15} className="dh-card-icon" />
             <h3>Recent Messages</h3>
             {unread > 0 && <span className="dh-unread-badge">{unread} unread</span>}
+            <Link to="/admin/messages" className="dh-card-link">
+              View inbox <ArrowRight size={13} />
+            </Link>
           </div>
           <div className="dh-msg-list">
             {contacts.slice(0, 4).map(c => (
-              <div key={c.id} className={`dh-msg-row${!c.is_read ? ' dh-msg-row--unread' : ''}`}>
+              <button
+                type="button"
+                key={c.id}
+                className={`dh-msg-row${!c.is_read ? ' dh-msg-row--unread' : ''}`}
+                onClick={() => navigate('/admin/messages')}
+              >
                 <div className="dh-msg-avatar">
                   {(c.name?.[0] || '?').toUpperCase()}
                 </div>
                 <div className="dh-msg-body">
                   <span className="dh-msg-name">{c.name}</span>
-                  <span className="dh-msg-subject">{c.subject}</span>
+                  <span className="dh-msg-subject">{c.subject || '(no subject)'}</span>
                 </div>
                 <span className="dh-msg-time">{timeAgo(c.created_at)}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

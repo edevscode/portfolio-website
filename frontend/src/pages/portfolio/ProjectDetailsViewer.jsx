@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, ExternalLink, Maximize2 } from 'lucide-react'
 import { apiService, API_BASE_URL } from '../../services/apiService'
 import { cache, CACHE_KEYS, CACHE_TTL } from '../../services/cache'
-import { getReadableTextColor } from '../../utils/color'
 import { safeHref } from '../../utils/sanitize'
 import { useTheme } from '../../context/ThemeContext'
 import { useSeasonContext } from '../../context/useSeasonContext'
@@ -11,6 +11,15 @@ import { SeasonalDecorations } from '../../features/seasonal/components/Seasonal
 import Footer from './components/Footer'
 import Prose from '../../components/Prose'
 import './ProjectDetailsViewer.css'
+
+const TYPE_LABELS = {
+  live:    'Web Application',
+  mobile:  'Mobile App',
+  desktop: 'Desktop App',
+  api:     'API & Backend',
+  design:  'UI/UX Design',
+  local:   'Project Gallery',
+}
 
 function normalizeMediaUrl(url) {
   if (!url) return ''
@@ -30,10 +39,29 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
 }
 
+function ProjectSkeleton() {
+  return (
+    <div className="pd-skeleton" aria-busy="true" aria-label="Loading project">
+      <div className="pd-skel-nav">
+        <div className="pd-skel-bar pd-skel-back" />
+      </div>
+      <div className="pd-skel-main">
+        <div className="pd-skel-bar pd-skel-tag" />
+        <div className="pd-skel-bar pd-skel-title" />
+        <div className="pd-skel-actions">
+          <div className="pd-skel-bar pd-skel-pill" />
+          <div className="pd-skel-bar pd-skel-pill" />
+        </div>
+        <div className="pd-skel-cover" />
+        <div className="pd-skel-body" />
+      </div>
+    </div>
+  )
+}
+
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 
-function Lightbox({ items, idx, onClose, onPrev, onNext }) {
-  const image = items[idx]
+function LightboxStage({ image, onClose, onPrev, onNext, idx, total }) {
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
@@ -41,12 +69,6 @@ function Lightbox({ items, idx, onClose, onPrev, onNext }) {
   const [dragStartOffset, setDragStartOffset] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
-    setZoom(1)
-    setOffset({ x: 0, y: 0 })
-  }, [idx])
-
-  useEffect(() => {
-    if (idx === null) return
     const onKeyDown = (e) => {
       if (e.key === 'Escape') onClose()
       if (e.key === 'ArrowLeft') onPrev()
@@ -54,16 +76,13 @@ function Lightbox({ items, idx, onClose, onPrev, onNext }) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [idx, onClose, onPrev, onNext])
+  }, [onClose, onPrev, onNext])
 
   useEffect(() => {
-    if (idx === null) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
-  }, [idx])
-
-  if (idx === null || !image) return null
+  }, [])
 
   const handleWheel = (e) => {
     e.preventDefault()
@@ -87,19 +106,17 @@ function Lightbox({ items, idx, onClose, onPrev, onNext }) {
   const stopDragging = () => setDragging(false)
 
   const handleStageClick = (e) => {
+    e.stopPropagation()
     if (Math.abs(e.clientX - dragStart.x) > 5 || Math.abs(e.clientY - dragStart.y) > 5) return
     if (zoom > 1) { setZoom(1); setOffset({ x: 0, y: 0 }) } else setZoom(2.5)
   }
 
   return (
-    <div className="lightbox" role="dialog" aria-modal="true" onClick={onClose}>
-      {/* Counter */}
-      <div className="lightbox-counter">{idx + 1} / {items.length}</div>
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" onClick={onClose}>
+      {total > 1 && <div className="lightbox-counter">{idx + 1} / {total}</div>}
 
-      {/* Close */}
       <button type="button" className="lightbox-close" onClick={onClose} aria-label="Close">×</button>
 
-      {/* Prev */}
       {idx > 0 && (
         <button
           type="button"
@@ -111,8 +128,7 @@ function Lightbox({ items, idx, onClose, onPrev, onNext }) {
         </button>
       )}
 
-      {/* Next */}
-      {idx < items.length - 1 && (
+      {idx < total - 1 && (
         <button
           type="button"
           className="lightbox-nav lightbox-nav--next"
@@ -123,7 +139,6 @@ function Lightbox({ items, idx, onClose, onPrev, onNext }) {
         </button>
       )}
 
-      {/* Stage */}
       <div
         className={`lightbox-stage${dragging ? ' is-dragging' : ''}`}
         style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
@@ -143,13 +158,11 @@ function Lightbox({ items, idx, onClose, onPrev, onNext }) {
         />
       </div>
 
-      {/* Hint */}
       <div className="lightbox-hud">
         <span>{Math.round(zoom * 100)}%</span>
-        <span>scroll to zoom · drag to pan · ← → to navigate</span>
+        <span>scroll to zoom · drag to pan{total > 1 ? ' · ← → to navigate' : ''}</span>
       </div>
 
-      {/* Caption */}
       {image.caption && (
         <div className="lightbox-caption">{image.caption}</div>
       )}
@@ -157,14 +170,18 @@ function Lightbox({ items, idx, onClose, onPrev, onNext }) {
   )
 }
 
-// ── Play icon for video thumbnails ────────────────────────────────────────────
-
-function PlayIcon() {
+function Lightbox({ items, idx, onClose, onPrev, onNext }) {
+  if (idx === null || !items[idx]) return null
   return (
-    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" aria-hidden="true">
-      <circle cx="26" cy="26" r="26" fill="rgba(0,0,0,0.55)" />
-      <polygon points="21,17 39,26 21,35" fill="white" />
-    </svg>
+    <LightboxStage
+      key={idx}
+      image={items[idx]}
+      idx={idx}
+      total={items.length}
+      onClose={onClose}
+      onPrev={onPrev}
+      onNext={onNext}
+    />
   )
 }
 
@@ -197,9 +214,7 @@ export default function ProjectDetailsViewer() {
     accent: seasonConfig?.colors?.accent || '#4da6ff'
   }
 
-  useEffect(() => { loadData() }, [slug])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const slugStr = String(slug)
     const cachedProject = cache.get(CACHE_KEYS.project(slugStr))
     const cachedPortfolio = cache.get(CACHE_KEYS.portfolio)
@@ -214,6 +229,7 @@ export default function ProjectDetailsViewer() {
     }
 
     try {
+      setLoading(true)
       const [projectRes, portfolioRes] = await Promise.all([
         apiService.getProject(slugStr),
         cachedPortfolio ? Promise.resolve({ data: cachedPortfolio }) : apiService.getPortfolio(),
@@ -227,7 +243,12 @@ export default function ProjectDetailsViewer() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [slug, navigate])
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    loadData()
+  }, [loadData])
 
   const items = useMemo(() => {
     if (!project) return []
@@ -258,85 +279,168 @@ export default function ProjectDetailsViewer() {
     })
   }, [project])
 
-  // Only images participate in the lightbox
-  const imageItems = useMemo(() => items.filter((it) => it.type === 'image'), [items])
+  const coverUrl = useMemo(() => normalizeMediaUrl(project?.thumbnail), [project?.thumbnail])
+  const showGallery = items.length > 0 && project?.project_type === 'local'
+  const showCoverFrame = Boolean(coverUrl && (!showGallery || !items.some((it) => it.src === coverUrl)))
+
+  // Include cover image in lightbox list so clicking the hero cover opens zoomable view too
+  const lightboxImages = useMemo(() => {
+    const galleryImgs = items.filter((it) => it.type === 'image')
+    if (showCoverFrame && coverUrl && !galleryImgs.some((it) => it.src === coverUrl)) {
+      return [{ src: coverUrl, caption: project?.title || '', alt: project?.title || 'Project cover', type: 'image' }, ...galleryImgs]
+    }
+    return galleryImgs
+  }, [items, showCoverFrame, coverUrl, project?.title])
 
   const openLightbox = useCallback((src) => {
-    const idx = imageItems.findIndex((it) => it.src === src)
+    const idx = lightboxImages.findIndex((it) => it.src === src)
     if (idx !== -1) setLightboxIdx(idx)
-  }, [imageItems])
+  }, [lightboxImages])
 
   const closeLightbox = useCallback(() => setLightboxIdx(null), [])
   const prevImage = useCallback(() => setLightboxIdx((i) => Math.max(0, i - 1)), [])
-  const nextImage = useCallback(() => setLightboxIdx((i) => Math.min(imageItems.length - 1, i + 1)), [imageItems.length])
+  const nextImage = useCallback(() => setLightboxIdx((i) => Math.min(lightboxImages.length - 1, i + 1)), [lightboxImages.length])
+
+  const brandName = portfolio?.about?.hero_name?.trim() || 'Eron Dave Geronimo'
+
+  const availableSections = useMemo(() => {
+    const secs = [{ id: 'hero', label: 'Home' }]
+    if (!portfolio || portfolio?.projects?.length) secs.push({ id: 'projects', label: 'Projects' })
+    if (!portfolio || portfolio?.experiences?.length) secs.push({ id: 'experience', label: 'Experience' })
+    secs.push({ id: 'about', label: 'About' })
+    if (!portfolio || portfolio?.skills?.length) secs.push({ id: 'skills', label: 'Skills' })
+    if (!portfolio || portfolio?.certificates?.length) secs.push({ id: 'certificates', label: 'Certificates' })
+    secs.push({ id: 'contact', label: 'Contact' })
+    return secs
+  }, [portfolio])
+
+  const { prevProject, nextProject } = useMemo(() => {
+    const all = portfolio?.projects || []
+    if (!project || all.length < 2) return { prevProject: null, nextProject: null }
+    const currentIdx = all.findIndex((p) => String(p.slug || p.id) === String(project.slug || project.id))
+    if (currentIdx === -1) return { prevProject: null, nextProject: null }
+    return {
+      prevProject: currentIdx > 0 ? all[currentIdx - 1] : null,
+      nextProject: currentIdx < all.length - 1 ? all[currentIdx + 1] : null,
+    }
+  }, [portfolio?.projects, project])
+
+  useEffect(() => {
+    if (!project?.title) return
+    document.title = `${project.title} — ${brandName}`
+  }, [project?.title, brandName])
 
   if (loading) {
-    return <div className="loading-screen" style={{ backgroundColor: colors.background, color: colors.text }}>Loading Project...</div>
+    return <ProjectSkeleton />
   }
 
   if (!project) return null
 
   const totalMedia = items.length
-  const imgCount = imageItems.length
+  const imgCount = items.filter((it) => it.type === 'image').length
   const vidCount = items.filter((it) => it.type === 'video').length
+  const liveUrl = safeHref(project.url)
+  const githubUrl = safeHref(project.github_url)
+  const typeLabel = TYPE_LABELS[project.project_type] || 'Project'
 
   return (
-    <div className="project-details-page" style={{ backgroundColor: colors.background, color: colors.text }}>
+    <div className="project-details-page portfolio-root" style={{ backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)' }}>
       <SeasonalDecorations />
       <SeasonalBackground showParticles={true} themeColors={colors} />
 
       <Lightbox
-        items={imageItems}
+        items={lightboxImages}
         idx={lightboxIdx}
         onClose={closeLightbox}
         onPrev={prevImage}
         onNext={nextImage}
       />
 
-      {/* Nav */}
-      <nav className="project-details-nav" style={{ backgroundColor: `${colors.background}cc`, borderBottom: `1px solid ${colors.secondary}` }}>
-        <button className="back-btn" onClick={() => navigate('/')} style={{ color: colors.primary }}>
-          ← Back to Portfolio
-        </button>
+      {/* Sticky Breadcrumb Nav */}
+      <nav className="project-details-nav" aria-label="Project navigation">
+        <div className="project-details-nav-inner">
+          <Link to="/#projects" className="back-btn">
+            <ArrowLeft size={16} aria-hidden="true" />
+            <span>Back to Projects</span>
+          </Link>
+          <div className="pd-breadcrumb" aria-hidden="true">
+            <span>{brandName}</span>
+            <span className="pd-breadcrumb-sep">/</span>
+            <span className="pd-breadcrumb-current">{project.title}</span>
+          </div>
+        </div>
       </nav>
 
       <main className="project-details-main container">
 
-        {/* Hero header */}
+        {/* Editorial Hero Header */}
         <header className="project-details-hero">
-          <h1 style={{ color: colors.primary }}>{project.title}</h1>
-          <div className="project-details-links">
-            {safeHref(project.url) && (
-              <a href={safeHref(project.url)} target="_blank" rel="noopener noreferrer" className="pill-btn" style={{ backgroundColor: colors.accent, color: getReadableTextColor(colors.accent) }}>
-                Live Site
-              </a>
-            )}
-            {safeHref(project.github_url) && (
-              <a href={safeHref(project.github_url)} target="_blank" rel="noopener noreferrer" className="pill-btn" style={{ backgroundColor: colors.primary, color: getReadableTextColor(colors.primary) }}>
-                GitHub
-              </a>
+          <div className="pd-hero-meta">
+            <span className="pd-type-pill">{typeLabel}</span>
+            {project.is_featured && (
+              <span className="pd-featured-pill">Featured</span>
             )}
           </div>
+
+          <h1>{project.title}</h1>
+
+          {(liveUrl || githubUrl) && (
+            <div className="project-details-links">
+              {liveUrl && (
+                <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="pill-btn pill-btn--accent">
+                  <span>Live Site</span>
+                  <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              )}
+              {githubUrl && (
+                <a href={githubUrl} target="_blank" rel="noopener noreferrer" className="pill-btn pill-btn--primary">
+                  <span>View Source</span>
+                  <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              )}
+            </div>
+          )}
         </header>
+
+        {/* Cover Showcase Frame (ensures every project type shows its visual preview) */}
+        {showCoverFrame && (
+          <figure className="pd-cover-wrap">
+            <button
+              type="button"
+              className="pd-cover-btn"
+              onClick={() => openLightbox(coverUrl)}
+              aria-label={`Inspect ${project.title} preview image`}
+            >
+              <img
+                src={coverUrl}
+                alt={project.title}
+                className="pd-cover-img"
+              />
+              <span className="pd-cover-zoom" aria-hidden="true">
+                <Maximize2 size={15} />
+                <span>Inspect</span>
+              </span>
+            </button>
+          </figure>
+        )}
 
         {/* Description */}
         {project.description && (
-          <section className="project-details-description" style={{ backgroundColor: colors.secondary, borderColor: colors.accent }}>
-            <Prose style={{ color: colors.text }}>{project.description}</Prose>
+          <section className="project-details-description">
+            <div className="pd-section-tag">Overview</div>
+            <Prose style={{ color: 'var(--theme-surface-text)' }}>{project.description}</Prose>
           </section>
         )}
 
         {/* Gallery */}
-        {totalMedia > 0 && project.project_type === 'local' && (
+        {showGallery && (
           <section className="project-details-gallery">
             <div className="gallery-header">
-              <h2 style={{ color: colors.primary }}>Project Gallery</h2>
-              {totalMedia > 0 && (
-                <div className="gallery-meta">
-                  {imgCount > 0 && <span className="gallery-chip">{imgCount} photo{imgCount !== 1 ? 's' : ''}</span>}
-                  {vidCount > 0 && <span className="gallery-chip">{vidCount} video{vidCount !== 1 ? 's' : ''}</span>}
-                </div>
-              )}
+              <h2>Project Gallery</h2>
+              <div className="gallery-meta">
+                {imgCount > 0 && <span className="gallery-chip">{imgCount} photo{imgCount !== 1 ? 's' : ''}</span>}
+                {vidCount > 0 && <span className="gallery-chip">{vidCount} video{vidCount !== 1 ? 's' : ''}</span>}
+              </div>
             </div>
 
             <div className="gallery-bento">
@@ -370,7 +474,12 @@ export default function ProjectDetailsViewer() {
                         onClick={() => openLightbox(it.src)}
                         role="button"
                         tabIndex={0}
-                        onKeyDown={(e) => e.key === 'Enter' && openLightbox(it.src)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            openLightbox(it.src)
+                          }
+                        }}
                         aria-label={`View image${it.caption ? `: ${it.caption}` : ''}`}
                       >
                         <img
@@ -390,12 +499,11 @@ export default function ProjectDetailsViewer() {
                             </div>
                           </div>
                           {isHero && (
-                            <div className="gallery-cell-hero-badge" style={{ backgroundColor: colors.accent, color: getReadableTextColor(colors.accent) }}>
+                            <div className="gallery-cell-hero-badge" style={{ backgroundColor: 'var(--accent-color)', color: 'var(--theme-on-accent)' }}>
                               Featured
                             </div>
                           )}
                         </div>
-                        {/* Always-visible index dot */}
                         <div className="gallery-cell-index">{idx + 1}</div>
                       </div>
                     )}
@@ -405,9 +513,32 @@ export default function ProjectDetailsViewer() {
             </div>
           </section>
         )}
+
+        {/* Previous / Next Project Switcher */}
+        {(prevProject || nextProject) && (
+          <nav className="pd-more-projects" aria-label="More projects">
+            {prevProject ? (
+              <Link to={`/project/${prevProject.slug || prevProject.id}`} className="pd-more-card">
+                <span className="pd-more-dir">
+                  <ArrowLeft size={13} aria-hidden="true" /> Previous Project
+                </span>
+                <span className="pd-more-title">{prevProject.title}</span>
+              </Link>
+            ) : <div />}
+
+            {nextProject && (
+              <Link to={`/project/${nextProject.slug || nextProject.id}`} className="pd-more-card pd-more-card--next">
+                <span className="pd-more-dir">
+                  Next Project <ArrowRight size={13} aria-hidden="true" />
+                </span>
+                <span className="pd-more-title">{nextProject.title}</span>
+              </Link>
+            )}
+          </nav>
+        )}
       </main>
 
-      <Footer socialLinks={portfolio?.social_links} />
+      <Footer socialLinks={portfolio?.social_links} brandName={brandName} sections={availableSections} />
     </div>
   )
 }

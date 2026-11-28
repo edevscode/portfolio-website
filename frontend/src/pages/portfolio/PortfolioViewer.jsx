@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { apiService } from '../../services/apiService'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
+import { apiService, API_BASE_URL } from '../../services/apiService'
 import { cache, CACHE_KEYS, CACHE_TTL } from '../../services/cache'
 import { useTheme } from '../../context/ThemeContext'
 import { useSeasonContext } from '../../context/useSeasonContext'
@@ -14,14 +15,50 @@ import Experience from './components/Experience'
 import Certificates from './components/Certificates'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
+import ResumeViewer from './components/ResumeViewer'
 import './PortfolioViewer.css'
 import '../../features/seasonal/styles/seasonal.css'
 import '../../features/seasonal/styles/seasonal-decorations.css'
 
+function PortfolioSkeleton() {
+  return (
+    <div className="pv-skeleton" aria-busy="true" aria-label="Loading portfolio">
+      <div className="pv-skel-nav">
+        <div className="pv-skel-nav-inner">
+          <div className="pv-skel-bar pv-skel-logo" />
+          <div className="pv-skel-nav-links">
+            <div className="pv-skel-bar pv-skel-link" />
+            <div className="pv-skel-bar pv-skel-link" />
+            <div className="pv-skel-bar pv-skel-link" />
+            <div className="pv-skel-bar pv-skel-link" />
+          </div>
+        </div>
+      </div>
+      <div className="pv-skel-hero">
+        <div className="pv-skel-copy">
+          <div className="pv-skel-bar pv-skel-eyebrow" />
+          <div className="pv-skel-bar pv-skel-h1" />
+          <div className="pv-skel-bar pv-skel-h1 pv-skel-h1--short" />
+          <div className="pv-skel-bar pv-skel-role" />
+          <div className="pv-skel-bar pv-skel-line" />
+          <div className="pv-skel-bar pv-skel-line pv-skel-line--short" />
+          <div className="pv-skel-ctas">
+            <div className="pv-skel-bar pv-skel-btn" />
+            <div className="pv-skel-bar pv-skel-btn pv-skel-btn--ghost" />
+          </div>
+        </div>
+        <div className="pv-skel-portrait" />
+      </div>
+    </div>
+  )
+}
+
 export default function PortfolioViewer() {
   const [portfolio, setPortfolio] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [showResume, setShowResume] = useState(false)
   const prefetchedRef = useRef(new Set())
+  const location = useLocation()
   const { theme, refreshTheme } = useTheme()
   const { config: seasonConfig, setSeason } = useSeasonContext()
 
@@ -123,14 +160,56 @@ export default function PortfolioViewer() {
     }
   }, [portfolio])
 
+  const brandName = portfolio?.about?.hero_name?.trim() || 'Eron Dave Geronimo'
+
+  const resumeFileUrl = useMemo(() => {
+    const src = portfolio?.about?.resume_file
+    if (!src) return ''
+    if (/^https?:\/\//i.test(src)) return src
+    try {
+      const origin = new URL(API_BASE_URL).origin
+      return `${origin}${src.startsWith('/') ? '' : '/'}${src}`
+    } catch {
+      return src
+    }
+  }, [portfolio?.about?.resume_file])
+
+  const availableSections = useMemo(() => {
+    const items = [{ id: 'hero', label: 'Home' }]
+    if (portfolio?.projects?.length) items.push({ id: 'projects', label: 'Projects' })
+    if (portfolio?.experiences?.length) items.push({ id: 'experience', label: 'Experience' })
+    items.push({ id: 'about', label: 'About' })
+    if (portfolio?.skills?.length) items.push({ id: 'skills', label: 'Skills' })
+    if (portfolio?.certificates?.length) items.push({ id: 'certificates', label: 'Certificates' })
+    items.push({ id: 'contact', label: 'Contact' })
+    return items
+  }, [portfolio])
+
+  useEffect(() => {
+    const name = portfolio?.about?.hero_name?.trim() || 'Eron Dave Geronimo'
+    const role = portfolio?.about?.hero_role?.trim()
+    document.title = role ? `${name} — ${role}` : `${name} — Portfolio`
+  }, [portfolio?.about?.hero_name, portfolio?.about?.hero_role])
+
+  useEffect(() => {
+    if (loading || !location.hash) return
+    const targetId = location.hash.slice(1)
+    if (!targetId) return
+    const frame = requestAnimationFrame(() => {
+      const el = document.getElementById(targetId)
+      if (el) el.scrollIntoView({ behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [loading, location.hash])
+
   if (loading) {
-    return <div className="loading-screen">Loading...</div>
+    return <PortfolioSkeleton />
   }
 
   return (
-    <div className="portfolio-viewer" style={{
-      backgroundColor: colors.background,
-      color: colors.text,
+    <div className="portfolio-viewer portfolio-root" style={{
+      backgroundColor: 'var(--theme-bg)',
+      color: 'var(--theme-text)',
       transition: 'background-color 0.3s ease, color 0.3s ease'
     }}>
       {/* Seasonal decorative elements (corners and edges) */}
@@ -139,15 +218,33 @@ export default function PortfolioViewer() {
       {/* Seasonal background effects - always show seasonal elements with theme colors */}
       <SeasonalBackground showParticles={true} themeColors={colors} />
 
-      <Navigation />
-      <Hero about={portfolio?.about} />
-      <About about={portfolio?.about} />
-      <Skills skills={portfolio?.skills} />
+      <Navigation brandName={brandName} sections={availableSections} />
+      <Hero
+        about={portfolio?.about}
+        socialLinks={portfolio?.social_links}
+        hasResume={Boolean(resumeFileUrl)}
+        onOpenResume={() => setShowResume(true)}
+      />
       <Projects projects={portfolio?.projects} />
       <Experience experiences={portfolio?.experiences} />
+      <About
+        about={portfolio?.about}
+        projectsCount={portfolio?.projects?.length ?? 0}
+        experiences={portfolio?.experiences}
+        certificatesCount={portfolio?.certificates?.length ?? 0}
+      />
+      <Skills skills={portfolio?.skills} />
       <Certificates certificates={portfolio?.certificates} />
       <Contact about={portfolio?.about} socialLinks={portfolio?.social_links} />
-      <Footer socialLinks={portfolio?.social_links} />
+      <Footer socialLinks={portfolio?.social_links} brandName={brandName} sections={availableSections} />
+
+      {showResume && resumeFileUrl && (
+        <ResumeViewer
+          url={resumeFileUrl}
+          onClose={() => setShowResume(false)}
+          colors={colors}
+        />
+      )}
     </div>
   )
 }

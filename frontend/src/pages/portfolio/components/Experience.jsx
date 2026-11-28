@@ -1,6 +1,7 @@
 import React from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
+import { useReveal } from '../../../hooks/useReveal'
 import Prose from '../../../components/Prose'
 import './Experience.css'
 
@@ -26,6 +27,7 @@ function calcDuration(start, end, isCurrent) {
 export default function Experience({ experiences }) {
   const { config: seasonConfig } = useSeasonContext()
   const { theme } = useTheme()
+  const [revealRef, visible] = useReveal()
 
   const colors = theme ? {
     primary:    theme.primary_color    || seasonConfig?.colors?.primary    || '#1a472a',
@@ -45,7 +47,8 @@ export default function Experience({ experiences }) {
 
   return (
     <section
-      className="exp-section"
+      ref={revealRef}
+      className={`exp-section pv-reveal${visible ? ' pv-reveal--visible' : ''}`}
       id="experience"
       style={{
         '--ep': colors.primary,
@@ -59,9 +62,11 @@ export default function Experience({ experiences }) {
 
         {/* ── Section header ── */}
         <div className="exp-header">
-          <span className="exp-tag">Career</span>
+          <span className="pv-section-eyebrow exp-tag">
+            <span className="pv-section-eyebrow-num">02</span>
+            <span>Career</span>
+          </span>
           <h2 className="exp-title">Work Experience</h2>
-          <p className="exp-subtitle">My professional journey and the roles that shaped my skills</p>
         </div>
 
         {/* ── Timeline ── */}
@@ -70,10 +75,10 @@ export default function Experience({ experiences }) {
             const dur = calcDuration(exp.start_date, exp.end_date, exp.is_current)
             const isLast = idx === experiences.length - 1
             return (
-              <div key={exp.id} className="exp-item" style={{ animationDelay: `${idx * 0.1}s` }}>
+              <div key={exp.id} className="exp-item">
 
                 {/* Stem: dot + line */}
-                <div className="exp-stem">
+                <div className="exp-stem" aria-hidden="true">
                   <div className="exp-dot">
                     <div className="exp-dot-inner" />
                   </div>
@@ -83,9 +88,15 @@ export default function Experience({ experiences }) {
                 {/* Card */}
                 <div className="exp-card">
                   <div className="exp-card-head">
-                    <div className="exp-card-meta">
+                    <div className="exp-card-primary">
+                      <h3 className="exp-role">{exp.title}</h3>
                       {exp.company && (
                         <span className="exp-company">{exp.company}</span>
+                      )}
+                    </div>
+                    <div className="exp-card-aside">
+                      {exp.is_current && (
+                        <span className="exp-badge-current">Current</span>
                       )}
                       <span className="exp-date-range">
                         {fmtDate(exp.start_date)}
@@ -94,16 +105,11 @@ export default function Experience({ experiences }) {
                         {dur && <span className="exp-duration">&nbsp;· {dur}</span>}
                       </span>
                     </div>
-                    {exp.is_current && (
-                      <span className="exp-badge-current">Current</span>
-                    )}
                   </div>
-
-                  <h3 className="exp-role">{exp.title}</h3>
 
                   {exp.description && (
                     <div className="exp-desc">
-                      <Prose style={{ color: colors.text }}>{exp.description}</Prose>
+                      <Prose style={{ color: 'var(--theme-surface-text)' }}>{exp.description}</Prose>
                     </div>
                   )}
                 </div>

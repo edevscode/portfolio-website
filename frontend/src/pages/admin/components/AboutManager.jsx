@@ -1,9 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { User, FileText, Globe, Save, Upload, ExternalLink, Check } from 'lucide-react'
+import React, { useState, useEffect, useId, useMemo, useRef } from 'react'
+import { User, FileText, Globe, Save, Upload, ExternalLink, Check, RotateCcw } from 'lucide-react'
 import { apiService } from '../../../services/apiService'
 import SimpleRichArea from '../../../components/SimpleRichArea'
 import './Manager.css'
 import './AboutManager.css'
+
+const TEXT_FIELDS = [
+  'hero_name', 'hero_role', 'hero_tagline', 'hero_heading', 'hero_subheading',
+  'hero_cta_primary_text', 'hero_cta_primary_link',
+  'hero_cta_secondary_text', 'hero_cta_secondary_link',
+  'about_intro', 'about_background', 'about_specialization', 'about_text',
+]
+
+function serializeTextFields(obj) {
+  return JSON.stringify(TEXT_FIELDS.map((k) => obj?.[k] || ''))
+}
 
 const EMPTY = {
   title: 'Profile',
@@ -16,11 +27,12 @@ const EMPTY = {
   profile_image: null, resume_file: null,
 }
 
-function SectionCard({ title, icon: Icon, children }) {
+function SectionCard({ title, icon, children }) {
+  const Icon = icon
   return (
     <div className="about-card">
       <div className="about-card-header">
-        <Icon size={16} color="#6366f1" />
+        <Icon size={16} className="about-icon-accent" />
         <span>{title}</span>
       </div>
       <div className="about-card-body">{children}</div>
@@ -29,9 +41,10 @@ function SectionCard({ title, icon: Icon, children }) {
 }
 
 function Field({ label, name, type = 'text', value, onChange, placeholder, hint, rows }) {
+  const fieldId = useId()
   return (
     <div className="about-field">
-      <label className="about-label">
+      <label className="about-label" htmlFor={type === 'markdown' ? undefined : fieldId}>
         {label}
         {hint && <span className="about-hint">{hint}</span>}
       </label>
@@ -46,6 +59,7 @@ function Field({ label, name, type = 'text', value, onChange, placeholder, hint,
         />
       ) : type === 'textarea' ? (
         <textarea
+          id={fieldId}
           name={name}
           value={value || ''}
           onChange={onChange}
@@ -55,6 +69,7 @@ function Field({ label, name, type = 'text', value, onChange, placeholder, hint,
         />
       ) : (
         <input
+          id={fieldId}
           type={type}
           name={name}
           value={value || ''}
@@ -74,6 +89,7 @@ function Row({ children }) {
 export default function AboutManager() {
   const [about, setAbout] = useState(null)
   const [form, setForm] = useState(EMPTY)
+  const [savedSnapshot, setSavedSnapshot] = useState(() => serializeTextFields(EMPTY))
   const [profilePreview, setProfilePreview] = useState('')
   const [resumeName, setResumeName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -82,7 +98,22 @@ export default function AboutManager() {
   const photoInputRef = useRef(null)
   const resumeInputRef = useRef(null)
 
+  const isDirty = useMemo(() => {
+    const hasPendingFiles = form.profile_image instanceof File || form.resume_file instanceof File
+    return hasPendingFiles || serializeTextFields(form) !== savedSnapshot
+  }, [form, savedSnapshot])
+
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    if (!isDirty) return undefined
+    const onBeforeUnload = (e) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [isDirty])
 
   const load = async () => {
     try {
@@ -91,12 +122,22 @@ export default function AboutManager() {
         const data = res.data[0]
         setAbout(data)
         setForm(data)
+        setSavedSnapshot(serializeTextFields(data))
         if (data.profile_image) setProfilePreview(data.profile_image)
         if (data.resume_file) setResumeName('Current CV on file')
       }
     } catch {
       // silently ignore
     }
+  }
+
+  const handleDiscard = () => {
+    const base = about || EMPTY
+    setForm(base)
+    setSavedSnapshot(serializeTextFields(base))
+    setProfilePreview(base.profile_image || '')
+    setResumeName(base.resume_file ? 'Current CV on file' : '')
+    setError('')
   }
 
   const set = (e) => {
@@ -120,23 +161,24 @@ export default function AboutManager() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!isDirty || saving) return
     setSaving(true)
     setError('')
     try {
       const fd = new FormData()
       fd.append('title', form.title || about?.title || 'Profile')
-      const textFields = [
-        'hero_name','hero_role','hero_tagline','hero_heading','hero_subheading',
-        'hero_cta_primary_text','hero_cta_primary_link',
-        'hero_cta_secondary_text','hero_cta_secondary_link',
-        'about_intro','about_background','about_specialization','about_text',
-      ]
-      textFields.forEach(k => fd.append(k, form[k] || ''))
+      TEXT_FIELDS.forEach(k => fd.append(k, form[k] || ''))
       if (form.profile_image instanceof File) fd.append('profile_image', form.profile_image)
       if (form.resume_file instanceof File) fd.append('resume_file', form.resume_file)
 
       if (about) {
-        await apiService.updateAbout(about.id, fd)
+        const res = await apiService.updateAbout(about.id, fd)
+        const updated = res?.data || form
+        setAbout(updated)
+        setForm(updated)
+        setSavedSnapshot(serializeTextFields(updated))
+        if (updated.profile_image) setProfilePreview(updated.profile_image)
+        if (updated.resume_file) setResumeName('Current CV on file')
       } else {
         await apiService.createAbout(fd)
         await load()
@@ -156,12 +198,23 @@ export default function AboutManager() {
       {/* Sticky save bar */}
       <div className="about-topbar">
         <div className="about-topbar-left">
-          <User size={20} color="#6366f1" />
-          <h2>Hero &amp; About</h2>
+          <User size={17} className="about-icon-accent" />
+          <h2>Profile, Hero &amp; Bio</h2>
+          {isDirty && (
+            <span className="dirty-pill" role="status">
+              <span className="dirty-pill__dot" aria-hidden="true" />
+              Unsaved changes
+            </span>
+          )}
         </div>
         <div className="about-topbar-right">
-          {error && <span className="about-err">{error}</span>}
-          <button type="submit" className="btn-primary" disabled={saving}>
+          {error && <span className="about-err" role="alert">{error}</span>}
+          {isDirty && (
+            <button type="button" className="btn-secondary" onClick={handleDiscard} disabled={saving}>
+              <RotateCcw size={14} /> Discard
+            </button>
+          )}
+          <button type="submit" className="btn-primary" disabled={saving || (!isDirty && !saved)}>
             {saved
               ? <><Check size={15} /> Saved</>
               : saving
@@ -179,15 +232,16 @@ export default function AboutManager() {
           {/* Profile photo card */}
           <div className="about-card">
             <div className="about-card-header">
-              <User size={16} color="#6366f1" />
+              <User size={16} className="about-icon-accent" />
               <span>Profile Photo</span>
             </div>
-            <div className="about-card-body" style={{ alignItems: 'center', textAlign: 'center' }}>
+            <div className="about-card-body about-card-body--center">
               <button
                 type="button"
                 className="about-photo-upload"
                 onClick={() => photoInputRef.current?.click()}
                 title="Click to change photo"
+                aria-label="Upload profile photo"
               >
                 {profilePreview
                   ? <img src={profilePreview} alt="Profile" className="about-photo-img" />
@@ -205,16 +259,22 @@ export default function AboutManager() {
           {/* Resume card */}
           <div className="about-card">
             <div className="about-card-header">
-              <FileText size={16} color="#6366f1" />
+              <FileText size={16} className="about-icon-accent" />
               <span>Resume / CV</span>
             </div>
             <div className="about-card-body">
               {(resumeName || about?.resume_file) && (
                 <div className="about-resume-current">
-                  <FileText size={14} color="#6366f1" />
+                  <FileText size={14} className="about-icon-accent" />
                   <span>{resumeName || 'Current CV on file'}</span>
                   {about?.resume_file && typeof about.resume_file === 'string' && (
-                    <a href={about.resume_file} target="_blank" rel="noreferrer" className="about-resume-link">
+                    <a
+                      href={about.resume_file}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="about-resume-link"
+                      aria-label="Open current resume in new tab"
+                    >
                       <ExternalLink size={13} />
                     </a>
                   )}

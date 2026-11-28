@@ -1,152 +1,164 @@
 /* ── Section ── */
 .about {
-  padding: 96px 24px 112px;
-  background: var(--ab);
+  padding: clamp(72px, 8vw, 100px) 24px;
+  background: var(--theme-surface);
+  border-top: 1px solid var(--theme-surface-border);
+  border-bottom: 1px solid var(--theme-surface-border);
 }
 
 .about-inner {
-  max-width: 800px;
+  max-width: 1120px;
   margin: 0 auto;
+}
+
+/* ── Editorial 2-column split ── */
+.about-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.92fr) 1.15fr;
+  gap: clamp(32px, 5vw, 64px);
+  align-items: start;
+}
+
+.about-layout--single {
+  grid-template-columns: 1fr;
+  max-width: 760px;
+}
+
+.about-lead {
+  position: sticky;
+  top: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 /* ── Section header ── */
 .about-heading {
-  text-align: center;
-  margin-bottom: 56px;
+  text-align: left;
+  margin-bottom: 0;
 }
 
 .about-label {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  color: var(--ap);
-  background: color-mix(in srgb, var(--ap) 12%, transparent);
-  padding: 4px 14px;
-  border-radius: 999px;
-  margin-bottom: 14px;
+  color: var(--theme-accent-on-surface);
 }
 
 .about-title {
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-size: clamp(1.75rem, 3.6vw, 2.4rem);
   font-weight: 800;
-  color: var(--ap);
-  margin: 0 0 12px;
-  letter-spacing: -0.5px;
-  line-height: 1.15;
+  color: var(--theme-heading-on-surface);
+  margin: 0;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
 }
 
-.about-subtitle {
-  font-size: 15px;
-  color: var(--at);
-  opacity: 0.6;
-  max-width: 440px;
-  margin: 0 auto;
-  line-height: 1.65;
+.about-intro-text {
+  font-size: 1.08rem;
+  line-height: 1.75;
+  color: var(--theme-surface-text);
+  max-width: 56ch;
+}
+
+/* ── Quick facts strip ── */
+.about-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 4px 0 0;
+}
+
+.about-fact {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: var(--theme-bg);
+  border: 1px solid var(--theme-border);
+}
+
+.about-fact dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--theme-heading);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.about-fact dt {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-text-muted);
 }
 
 /* ── Content blocks ── */
 .about-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.about-intro-text {
-  font-size: 17px;
-  line-height: 1.75;
-  color: var(--at);
-  font-style: italic;
-  padding: 24px 28px;
-  background: color-mix(in srgb, var(--ap) 7%, transparent);
-  border-left: 4px solid var(--ap);
-  border-radius: 0 14px 14px 0;
+  gap: 18px;
 }
 
 .about-block {
-  background: color-mix(in srgb, var(--as) 55%, var(--ab));
-  border: 1px solid color-mix(in srgb, var(--ap) 10%, transparent);
-  border-radius: 16px;
-  padding: 22px 24px;
+  background: var(--theme-bg);
+  border: 1px solid var(--theme-border);
+  border-radius: 14px;
+  padding: 24px 26px;
 }
 
 .about-block-label {
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--ap);
+  color: var(--theme-accent-text);
   margin-bottom: 10px;
 }
 
 .about-block p {
   margin: 0;
-  line-height: 1.7;
-  color: var(--at);
+  line-height: 1.75;
+  color: var(--theme-text);
   font-size: 15px;
 }
 
-/* ── Resume button ── */
-.about-actions {
-  margin-top: 8px;
-}
-
-.view-resume-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 13px 28px;
-  border: none;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--ap) 28%, transparent);
-}
-
-.view-resume-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 32px color-mix(in srgb, var(--ap) 38%, transparent);
-  opacity: 0.9;
-}
-
 /* ── Responsive ── */
-@media (max-width: 768px) {
-  .about {
-    padding: 72px 20px 88px;
+@media (max-width: 860px) {
+  .about-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 
-  .about-heading {
-    margin-bottom: 40px;
+  .about-lead {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .about {
+    padding: 64px 20px;
   }
 
   .about-intro-text {
-    font-size: 15.5px;
-    padding: 18px 22px;
+    font-size: 1rem;
   }
 }
 
 @media (max-width: 480px) {
   .about {
-    padding: 56px 16px 72px;
+    padding: 52px 16px;
   }
 
   .about-intro-text {
-    font-size: 15px;
-    padding: 16px 18px;
-    border-radius: 0 10px 10px 0;
+    font-size: 0.975rem;
   }
 
   .about-block {
-    padding: 16px 18px;
+    padding: 18px;
     border-radius: 12px;
-  }
-
-  .view-resume-btn {
-    width: 100%;
-    justify-content: center;
   }
 }

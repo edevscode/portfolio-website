@@ -52,7 +52,7 @@
 .resume-download-btn {
   padding: 8px 20px;
   border-radius: 100px;
-  color: white;
+  color: var(--theme-on-primary);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
@@ -77,6 +77,12 @@
 
 .resume-close-btn:hover {
   color: #000;
+}
+
+.resume-close-btn:focus-visible,
+.resume-download-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .resume-viewer-body {

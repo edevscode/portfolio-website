@@ -1,6 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Mail, MailOpen, Trash2, MessageSquare, Plus, Phone, MapPin, Save, Check } from 'lucide-react'
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  Mail, MailOpen, Trash2, Plus, Phone, MapPin, Save, Check,
+  Search, X, Reply, Copy, Inbox,
+} from 'lucide-react'
 import { apiService } from '../../../services/apiService'
+import { AdminToast, ConfirmDialog } from './Form'
 import SocialLinksManager from './SocialLinksManager'
 import './Manager.css'
 
@@ -10,42 +14,83 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function MessageModal({ contact, onClose, onMarkRead }) {
+function buildReplyHref(contact) {
+  const subject = contact.subject ? `Re: ${contact.subject}` : 'Re: Portfolio Inquiry'
+  return `mailto:${contact.email}?subject=${encodeURIComponent(subject)}`
+}
+
+function MessageModal({ contact, onClose, onDelete, onCopyEmail, copiedEmail }) {
+  const titleId = useId()
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose])
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+      <div
+        className="modal-content msg-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={e => e.stopPropagation()}
+      >
         <div className="modal-header">
           <div>
-            <h2 style={{ marginBottom: 2 }}>{contact.subject || '(no subject)'}</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>
-              {contact.name} &nbsp;·&nbsp; <a href={`mailto:${contact.email}`} style={{ color: '#6366f1' }}>{contact.email}</a>
+            <h2 id={titleId} className="msg-modal__title">{contact.subject || '(no subject)'}</h2>
+            <p className="msg-modal__meta">
+              <strong>{contact.name}</strong> &nbsp;·&nbsp; <a href={`mailto:${contact.email}`}>{contact.email}</a>
               &nbsp;·&nbsp; {formatDate(contact.created_at)}
             </p>
           </div>
-          <button className="close-modal" onClick={onClose} aria-label="Close">×</button>
+          <button type="button" className="close-modal" onClick={onClose} aria-label="Close">×</button>
         </div>
-        <div style={{ padding: '20px 24px 28px', fontSize: 14, color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        <div className="msg-modal__body">
           {contact.message}
         </div>
-        {!contact.is_read && (
-          <div style={{ padding: '0 24px 20px', borderTop: '1px solid #f1f5f9', paddingTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn-primary" onClick={() => { onMarkRead(contact.id); onClose() }}>
-              <MailOpen size={15} /> Mark as Read
-            </button>
-          </div>
-        )}
+        <div className="msg-modal__footer">
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={() => { onClose(); onDelete(contact.id) }}
+          >
+            <Trash2 size={14} /> Delete
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => onCopyEmail(contact.email)}
+          >
+            {copiedEmail ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Email</>}
+          </button>
+          <a href={buildReplyHref(contact)} className="btn-primary">
+            <Reply size={14} /> Reply
+          </a>
+        </div>
       </div>
     </div>
   )
 }
 
-function CIField({ icon: Icon, label, name, type = 'text', value, onChange, placeholder }) {
+function CIField({ icon, label, name, type = 'text', value, onChange, placeholder }) {
+  const Icon = icon
+  const fieldId = useId()
   return (
     <div className="ci-field">
-      <label className="ci-label">{label}</label>
+      <label className="ci-label" htmlFor={fieldId}>{label}</label>
       <div className="ci-input-wrap">
-        <Icon size={15} className="ci-input-icon" />
+        <Icon size={15} className="ci-input-icon" aria-hidden="true" />
         <input
+          id={fieldId}
           type={type}
           name={name}
           value={value}
@@ -64,59 +109,118 @@ export default function ContactsManager() {
   // Inbox state
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [viewing, setViewing] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
+  const [mobileViewing, setMobileViewing] = useState(null)
+  const [inboxSearch, setInboxSearch] = useState('')
+  const [inboxFilter, setInboxFilter] = useState('all')
+  const [copiedEmail, setCopiedEmail] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [toast, setToast] = useState(null)
   const socialRef = useRef(null)
+  const toastTimer = useRef(null)
+  const copyTimer = useRef(null)
 
   // Contact Info state
   const [aboutId, setAboutId] = useState(null)
   const [ciForm, setCiForm] = useState({ email: '', phone: '', location: '' })
+  const [ciSavedSnapshot, setCiSavedSnapshot] = useState('{"email":"","phone":"","location":""}')
   const [ciSaving, setCiSaving] = useState(false)
   const [ciSaved, setCiSaved] = useState(false)
   const [ciError, setCiError] = useState('')
 
-  useEffect(() => { loadContacts(); loadAbout() }, [])
+  const showToast = useCallback((message, type = 'success') => {
+    clearTimeout(toastTimer.current)
+    setToast({ message, type })
+    toastTimer.current = setTimeout(() => setToast(null), 3200)
+  }, [])
 
-  const loadContacts = async () => {
+  const loadContacts = useCallback(async () => {
     try {
       setLoading(true)
       const res = await apiService.getContacts()
-      setContacts(res.data)
+      const list = res.data || []
+      setContacts(list)
+      setSelectedId((prev) => (prev && list.some((c) => c.id === prev) ? prev : (list[0]?.id ?? null)))
     } catch {
-      // silently ignore
+      showToast('Failed to load messages.', 'error')
     } finally {
       setLoading(false)
     }
-  }
+  }, [showToast])
 
-  const loadAbout = async () => {
+  const loadAbout = useCallback(async () => {
     try {
       const res = await apiService.getAbout()
       if (res.data?.length > 0) {
         const data = res.data[0]
+        const next = { email: data.email || '', phone: data.phone || '', location: data.location || '' }
         setAboutId(data.id)
-        setCiForm({ email: data.email || '', phone: data.phone || '', location: data.location || '' })
+        setCiForm(next)
+        setCiSavedSnapshot(JSON.stringify(next))
       }
     } catch {
       // silently ignore
     }
+  }, [])
+
+  useEffect(() => {
+    loadContacts()
+    loadAbout()
+    return () => {
+      clearTimeout(toastTimer.current)
+      clearTimeout(copyTimer.current)
+    }
+  }, [loadContacts, loadAbout])
+
+  const notifyShellMeta = () => {
+    window.dispatchEvent(new CustomEvent('admin:meta-updated'))
   }
 
   const markAsRead = async (id) => {
     try {
       await apiService.markContactAsRead(id)
       setContacts(prev => prev.map(c => c.id === id ? { ...c, is_read: true } : c))
+      notifyShellMeta()
     } catch {
-      alert('Failed to mark as read.')
+      showToast('Failed to mark message as read.', 'error')
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this message?')) return
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return
+    setDeleting(true)
     try {
-      await apiService.deleteContact(id)
-      setContacts(prev => prev.filter(c => c.id !== id))
+      await apiService.deleteContact(deleteTargetId)
+      setContacts((prev) => {
+        const remaining = prev.filter((c) => c.id !== deleteTargetId)
+        if (selectedId === deleteTargetId) {
+          setSelectedId(remaining[0]?.id ?? null)
+        }
+        return remaining
+      })
+      if (mobileViewing?.id === deleteTargetId) setMobileViewing(null)
+      setDeleteTargetId(null)
+      notifyShellMeta()
+      showToast('Message deleted')
     } catch {
-      alert('Failed to delete message.')
+      showToast('Failed to delete message.', 'error')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleCopyEmail = async (email) => {
+    if (!email) return
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(email)
+      }
+      clearTimeout(copyTimer.current)
+      setCopiedEmail(true)
+      copyTimer.current = setTimeout(() => setCopiedEmail(false), 2000)
+    } catch {
+      showToast('Could not copy email', 'error')
     }
   }
 
@@ -125,9 +229,11 @@ export default function ContactsManager() {
     setCiForm(prev => ({ ...prev, [name]: value }))
   }
 
+  const ciDirty = JSON.stringify(ciForm) !== ciSavedSnapshot
+
   const handleCiSave = async (e) => {
     e.preventDefault()
-    if (!aboutId) return
+    if (!aboutId || !ciDirty || ciSaving) return
     setCiSaving(true)
     setCiError('')
     try {
@@ -136,6 +242,7 @@ export default function ContactsManager() {
       fd.append('phone', ciForm.phone)
       fd.append('location', ciForm.location)
       await apiService.updateAbout(aboutId, fd)
+      setCiSavedSnapshot(JSON.stringify(ciForm))
       setCiSaved(true)
       setTimeout(() => setCiSaved(false), 2500)
     } catch (err) {
@@ -146,40 +253,82 @@ export default function ContactsManager() {
   }
 
   const unread = contacts.filter(c => !c.is_read).length
+  const deleteTarget = contacts.find(c => c.id === deleteTargetId)
+
+  const filteredContacts = useMemo(() => {
+    const q = inboxSearch.trim().toLowerCase()
+    return contacts.filter((c) => {
+      if (inboxFilter === 'unread' && c.is_read) return false
+      if (q) {
+        const hay = `${c.name || ''} ${c.email || ''} ${c.subject || ''} ${c.message || ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [contacts, inboxSearch, inboxFilter])
+
+  const selectedContact = useMemo(() => {
+    const match = filteredContacts.find((c) => c.id === selectedId)
+    return match || filteredContacts[0] || null
+  }, [filteredContacts, selectedId])
+
+  const openMessage = (contact) => {
+    setSelectedId(contact.id)
+    if (window.innerWidth <= 900) {
+      setMobileViewing(contact)
+    }
+    if (!contact.is_read) markAsRead(contact.id)
+  }
+
+  const isInboxFiltered = Boolean(inboxSearch.trim() || inboxFilter !== 'all')
 
   return (
     <div className="manager">
       <div className="manager-header">
         <div className="manager-header-left">
-          <MessageSquare size={22} color="#6366f1" />
-          <h2>Contact</h2>
-          {unread > 0 && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              minWidth: 20, height: 20, padding: '0 6px',
-              background: '#ef4444', color: '#fff',
-              fontSize: 11, fontWeight: 800, borderRadius: 999,
-            }}>{unread}</span>
-          )}
-          <div className="manager-tabs" role="tablist">
-            <button type="button" className={`manager-tab${activeTab === 'inbox' ? ' active' : ''}`} onClick={() => setActiveTab('inbox')}>
-              Inbox
+          <div className="manager-tabs" role="tablist" aria-label="Contact sections">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'inbox'}
+              className={`manager-tab${activeTab === 'inbox' ? ' active' : ''}`}
+              onClick={() => setActiveTab('inbox')}
+            >
+              Inbox {unread > 0 && <span className="unread-count-badge" style={{ marginLeft: 6 }}>{unread}</span>}
             </button>
-            <button type="button" className={`manager-tab${activeTab === 'social' ? ' active' : ''}`} onClick={() => setActiveTab('social')}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'social'}
+              className={`manager-tab${activeTab === 'social' ? ' active' : ''}`}
+              onClick={() => setActiveTab('social')}
+            >
               Social Links
             </button>
-            <button type="button" className={`manager-tab${activeTab === 'info' ? ' active' : ''}`} onClick={() => setActiveTab('info')}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'info'}
+              className={`manager-tab${activeTab === 'info' ? ' active' : ''}`}
+              onClick={() => setActiveTab('info')}
+            >
               Contact Info
             </button>
           </div>
+          {activeTab === 'info' && ciDirty && (
+            <span className="dirty-pill" role="status">
+              <span className="dirty-pill__dot" aria-hidden="true" />
+              Unsaved changes
+            </span>
+          )}
         </div>
         {activeTab === 'social' && (
-          <button className="btn-primary" onClick={() => socialRef.current?.openAdd()}>
-            <Plus size={18} /> Add Link
+          <button type="button" className="btn-primary" onClick={() => socialRef.current?.openAdd()}>
+            <Plus size={16} /> Add Link
           </button>
         )}
         {activeTab === 'info' && (
-          <button className="btn-primary" onClick={handleCiSave} disabled={ciSaving || !aboutId}>
+          <button type="button" className="btn-primary" onClick={handleCiSave} disabled={ciSaving || !aboutId || (!ciDirty && !ciSaved)}>
             {ciSaved
               ? <><Check size={15} /> Saved</>
               : ciSaving
@@ -189,62 +338,222 @@ export default function ContactsManager() {
         )}
       </div>
 
-      <div className="manager-section">
-        {activeTab === 'social' ? (
-          <SocialLinksManager ref={socialRef} embedded />
-        ) : activeTab === 'info' ? (
+      {activeTab === 'social' ? (
+        <SocialLinksManager ref={socialRef} embedded />
+      ) : activeTab === 'info' ? (
+        <div className="manager-section">
           <form className="ci-form" onSubmit={handleCiSave}>
-            {ciError && <p className="ci-error">{ciError}</p>}
+            {ciError && <p className="ci-alert" role="alert">{ciError}</p>}
             <p className="ci-desc">This information appears in the Contact section of your portfolio.</p>
             <CIField icon={Mail}    label="Email"    name="email"    type="email" value={ciForm.email}    onChange={handleCiChange} placeholder="you@example.com" />
             <CIField icon={Phone}   label="Phone"    name="phone"    value={ciForm.phone}    onChange={handleCiChange} placeholder="+1 (555) 000-0000" />
             <CIField icon={MapPin}  label="Location" name="location" value={ciForm.location} onChange={handleCiChange} placeholder="City, Country" />
           </form>
-        ) : loading ? (
-          <div className="loading">Loading…</div>
-        ) : contacts.length === 0 ? (
-          <div className="no-data">No messages yet.</div>
-        ) : (
-          <div className="inbox-list">
-            {contacts.map(c => (
-              <div
-                key={c.id}
-                className={`inbox-row${c.is_read ? '' : ' inbox-row--unread'}`}
-                onClick={() => { setViewing(c); if (!c.is_read) markAsRead(c.id) }}
-              >
-                <span className="inbox-icon">
-                  {c.is_read
-                    ? <MailOpen size={16} color="#94a3b8" />
-                    : <Mail size={16} color="#6366f1" />}
-                </span>
-                <div className="inbox-main">
-                  <div className="inbox-top">
-                    <span className="inbox-name">{c.name}</span>
-                    <span className="inbox-date">{formatDate(c.created_at)}</span>
-                  </div>
-                  <div className="inbox-subject">{c.subject || '(no subject)'}</div>
-                  <div className="inbox-preview">{c.message}</div>
-                </div>
+        </div>
+      ) : (
+        <>
+          <div className="manager-toolbar">
+            <div className="manager-toolbar-left">
+              <div className="manager-search">
+                <Search size={14} className="manager-search__icon" aria-hidden="true" />
+                <input
+                  type="search"
+                  className="manager-search__input"
+                  value={inboxSearch}
+                  onChange={(e) => setInboxSearch(e.target.value)}
+                  placeholder="Search messages…"
+                  aria-label="Search messages"
+                />
+                {inboxSearch && (
+                  <button
+                    type="button"
+                    className="manager-search__clear"
+                    onClick={() => setInboxSearch('')}
+                    aria-label="Clear search"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              <div className="manager-filter-pills" role="group" aria-label="Filter messages">
                 <button
-                  className="inbox-delete"
-                  title="Delete"
-                  onClick={e => { e.stopPropagation(); handleDelete(c.id) }}
+                  type="button"
+                  className={`manager-filter-pill${inboxFilter === 'all' ? ' is-active' : ''}`}
+                  aria-pressed={inboxFilter === 'all'}
+                  onClick={() => setInboxFilter('all')}
                 >
-                  <Trash2 size={14} />
+                  All
+                </button>
+                <button
+                  type="button"
+                  className={`manager-filter-pill${inboxFilter === 'unread' ? ' is-active' : ''}`}
+                  aria-pressed={inboxFilter === 'unread'}
+                  onClick={() => setInboxFilter('unread')}
+                >
+                  Unread {unread > 0 ? `(${unread})` : ''}
                 </button>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {viewing && (
+              {!loading && contacts.length > 0 && (
+                <span className="manager-result-meta">
+                  {isInboxFiltered ? `${filteredContacts.length} of ${contacts.length}` : `${contacts.length} total`}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="table-skeleton" aria-busy="true" aria-label="Loading messages">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="table-skeleton__row">
+                  <div className="table-skeleton__bar" style={{ width: 20 }} />
+                  <div className="table-skeleton__bar" style={{ flex: 1 }} />
+                  <div className="table-skeleton__bar" style={{ width: 72 }} />
+                </div>
+              ))}
+            </div>
+          ) : filteredContacts.length === 0 ? (
+            <div className="table-empty">
+              <div className="table-empty__icon" aria-hidden="true">
+                <Inbox size={22} />
+              </div>
+              <p className="table-empty__title">{isInboxFiltered ? 'No matching messages' : 'Inbox is empty'}</p>
+              <p className="table-empty__desc">
+                {isInboxFiltered
+                  ? 'No messages match your search or unread filter.'
+                  : 'Messages submitted from your portfolio contact form will appear here.'}
+              </p>
+              {isInboxFiltered && (
+                <button
+                  type="button"
+                  className="btn-primary table-empty__cta"
+                  onClick={() => { setInboxSearch(''); setInboxFilter('all') }}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="inbox-split">
+              <div className="inbox-pane-list" role="list">
+                {filteredContacts.map(c => {
+                  const isSelected = selectedContact?.id === c.id
+                  return (
+                    <div
+                      key={c.id}
+                      role="listitem"
+                      className={`inbox-row${c.is_read ? '' : ' inbox-row--unread'}${isSelected ? ' inbox-row--selected' : ''}`}
+                      onClick={() => openMessage(c)}
+                    >
+                      <span className="inbox-icon" aria-hidden="true">
+                        {c.is_read
+                          ? <MailOpen size={15} color="#94a3b8" />
+                          : <Mail size={15} className="manager-header-icon" />}
+                      </span>
+                      <div
+                        className="inbox-main"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            openMessage(c)
+                          }
+                        }}
+                      >
+                        <div className="inbox-top">
+                          <span className="inbox-name">{c.name}</span>
+                          <span className="inbox-date">{formatDate(c.created_at)}</span>
+                        </div>
+                        <div className="inbox-subject">{c.subject || '(no subject)'}</div>
+                        <div className="inbox-preview">{c.message}</div>
+                      </div>
+                      <button
+                        type="button"
+                        className="inbox-delete"
+                        title="Delete"
+                        aria-label={`Delete message from ${c.name}`}
+                        onClick={e => { e.stopPropagation(); setDeleteTargetId(c.id) }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="inbox-pane-reader">
+                {selectedContact ? (
+                  <>
+                    <div className="inbox-reader-head">
+                      <div>
+                        <h3 className="inbox-reader-subject">{selectedContact.subject || '(no subject)'}</h3>
+                        <div className="inbox-reader-meta">
+                          <strong>{selectedContact.name}</strong>
+                          <span>·</span>
+                          <a href={`mailto:${selectedContact.email}`}>{selectedContact.email}</a>
+                        </div>
+                      </div>
+                      <span className="inbox-reader-date">{formatDate(selectedContact.created_at)}</span>
+                    </div>
+                    <div className="inbox-reader-body">
+                      {selectedContact.message}
+                    </div>
+                    <div className="inbox-reader-footer">
+                      <div className="inbox-reader-actions">
+                        <a href={buildReplyHref(selectedContact)} className="btn-primary">
+                          <Reply size={14} /> Reply via Email
+                        </a>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => handleCopyEmail(selectedContact.email)}
+                        >
+                          {copiedEmail ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Email</>}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-danger"
+                        onClick={() => setDeleteTargetId(selectedContact.id)}
+                      >
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="inbox-reader-empty">
+                    <MailOpen size={24} />
+                    <span>Select a message to read</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {mobileViewing && (
         <MessageModal
-          contact={viewing}
-          onClose={() => setViewing(null)}
-          onMarkRead={markAsRead}
+          contact={mobileViewing}
+          onClose={() => setMobileViewing(null)}
+          onDelete={setDeleteTargetId}
+          onCopyEmail={handleCopyEmail}
+          copiedEmail={copiedEmail}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteTargetId}
+        title="Delete message?"
+        message={deleteTarget ? `Permanently delete the message from "${deleteTarget.name}"?` : ''}
+        confirmText="Delete"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+
+      <AdminToast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   )
 }

@@ -1,7 +1,152 @@
 .portfolio-viewer {
   min-height: 100vh;
-  background: var(--bg-color);
-  color: var(--text-color);
+  background: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+/* ── Shared viewport reveal ── */
+.pv-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pv-reveal--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ── Editorial section rhythm ── */
+.pv-section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.pv-section-eyebrow-num {
+  opacity: 0.55;
+}
+
+/* ── Skeleton Loader ── */
+.pv-skeleton {
+  min-height: 100vh;
+  background: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+.pv-skel-nav {
+  height: 70px;
+  border-bottom: 1px solid var(--theme-border);
+  display: flex;
+  align-items: center;
+}
+
+.pv-skel-nav-inner {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pv-skel-nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.pv-skel-hero {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 96px 40px 72px;
+  display: grid;
+  grid-template-columns: 1fr 370px;
+  gap: 60px;
+  align-items: center;
+}
+
+.pv-skel-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pv-skel-bar,
+.pv-skel-portrait {
+  background: linear-gradient(
+    90deg,
+    var(--theme-tint) 25%,
+    var(--theme-border) 50%,
+    var(--theme-tint) 75%
+  );
+  background-size: 200% 100%;
+  animation: pv-shimmer 1.5s ease-in-out infinite;
+  border-radius: 10px;
+}
+
+@keyframes pv-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.pv-skel-logo { width: 150px; height: 22px; }
+.pv-skel-link { width: 58px; height: 14px; }
+.pv-skel-eyebrow { width: 120px; height: 14px; }
+.pv-skel-h1 { width: 85%; height: 46px; }
+.pv-skel-h1--short { width: 55%; }
+.pv-skel-role { width: 42%; height: 22px; margin-top: 4px; }
+.pv-skel-line { width: 92%; height: 16px; }
+.pv-skel-line--short { width: 68%; }
+
+.pv-skel-ctas {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pv-skel-btn { width: 148px; height: 46px; border-radius: 12px; }
+.pv-skel-btn--ghost { width: 132px; }
+
+.pv-skel-portrait {
+  width: 100%;
+  max-width: 370px;
+  aspect-ratio: 4 / 5;
+  border-radius: 24px;
+}
+
+@media (max-width: 900px) {
+  .pv-skel-nav-links { display: none; }
+  .pv-skel-hero {
+    grid-template-columns: 1fr;
+    padding: 72px 24px;
+    justify-items: center;
+  }
+  .pv-skel-copy {
+    width: 100%;
+    align-items: center;
+  }
+  .pv-skel-portrait {
+    order: -1;
+    max-width: 240px;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+  }
 }
 
 .loading-screen {
@@ -9,8 +154,8 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  font-size: 24px;
-  color: var(--accent-color);
+  font-size: 16px;
+  color: var(--theme-text-muted);
 }
 
 /* Scrollbar */

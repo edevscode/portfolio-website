@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { apiService } from '../services/apiService'
 import { safeHexColor, safeHref } from '../utils/sanitize'
+import { resolveThemeTokens } from '../utils/color'
 
 const ALLOWED_ANIMATIONS = new Set(['none', 'fade', 'slide', 'bounce', 'glow', 'float', 'pulse', 'gradient'])
 const ALLOWED_PARTICLES = new Set(['none', 'snow', 'leaves', 'stars'])
@@ -117,12 +118,34 @@ export default function ThemeProvider({ children }) {
       card_style: safeCardStyle,
     }
     
-    // Apply colors
+    // Apply raw colors (preserved for backwards compatibility)
     root.style.setProperty('--primary-color', primaryColor)
     root.style.setProperty('--secondary-color', secondaryColor)
     root.style.setProperty('--accent-color', accentColor)
     root.style.setProperty('--bg-color', bgColor)
     root.style.setProperty('--text-color', textColor)
+
+    // Apply WCAG-verified semantic tokens for Portfolio Viewer
+    const tokens = resolveThemeTokens(safeTheme)
+    root.style.setProperty('--theme-bg', tokens.bg)
+    root.style.setProperty('--theme-text', tokens.text)
+    root.style.setProperty('--theme-text-muted', tokens.textMuted)
+    root.style.setProperty('--theme-surface', tokens.surface)
+    root.style.setProperty('--theme-surface-text', tokens.surfaceText)
+    root.style.setProperty('--theme-surface-muted', tokens.surfaceMuted)
+    root.style.setProperty('--theme-heading', tokens.heading)
+    root.style.setProperty('--theme-heading-on-surface', tokens.headingOnSurface)
+    root.style.setProperty('--theme-accent-text', tokens.accentText)
+    root.style.setProperty('--theme-accent-on-surface', tokens.accentOnSurface)
+    root.style.setProperty('--theme-on-primary', tokens.onPrimary)
+    root.style.setProperty('--theme-on-accent', tokens.onAccent)
+    root.style.setProperty('--theme-on-primary-muted', tokens.onPrimaryMuted)
+    root.style.setProperty('--theme-on-primary-border', tokens.onPrimaryBorder)
+    root.style.setProperty('--theme-border', tokens.border)
+    root.style.setProperty('--theme-border-strong', tokens.borderStrong)
+    root.style.setProperty('--theme-surface-border', tokens.surfaceBorder)
+    root.style.setProperty('--theme-tint', tokens.tint)
+    root.style.setProperty('--theme-surface-tint', tokens.surfaceTint)
     
     // Apply visual effects
     const safeBgImage = safeHref(themeData.background_image)
@@ -147,8 +170,8 @@ export default function ThemeProvider({ children }) {
     root.style.setProperty('--shadow-color', shadowColor)
     root.style.setProperty('--shadow-blur', `${shadowIntensity * 20}px`)
     
-    // Border radius effect
-    root.style.setProperty('--border-radius', `${Number(themeData.border_radius) || 0}px`)
+    // Border radius effect (isolated from base input --border-radius)
+    root.style.setProperty('--theme-border-radius', `${Number(themeData.border_radius) || 0}px`)
     
     // Blur effect
     root.style.setProperty('--blur-effect', `blur(${Number(themeData.blur_effect) || 0}px)`)
@@ -184,9 +207,9 @@ export default function ThemeProvider({ children }) {
     }
 
     const animationKeyframes = getAnimationKeyframes(themeData.animation_type)
-    const hoverStyles = themeData.use_hover_effects ? getHoverStyles(themeData) : ''
-    const cardStyles = getCardStyles(themeData.card_style, themeData)
     
+    // Keep dynamic styles scoped strictly to Viewer opt-in elements so Admin
+    // controls, plain text links, and .theme-card tiles remain unaffected.
     styleTag.textContent = `
       ${animationKeyframes}
       
@@ -194,12 +217,9 @@ export default function ThemeProvider({ children }) {
         --animation-active: 1;
       }
       
-      .theme-animated-element {
+      .portfolio-root .theme-animated-element {
         animation: themeAnimation var(--animation-duration) ease-in-out var(--animation-delay) forwards;
       }
-      
-      ${hoverStyles}
-      ${cardStyles}
     `
   }
 
@@ -242,55 +262,6 @@ export default function ThemeProvider({ children }) {
       }`,
     }
     return keyframes[animationType] || keyframes.none
-  }
-
-  const getHoverStyles = (themeData) => {
-    return `
-      button, a, .interactive-element {
-        transition: all 0.3s ease;
-      }
-      
-      button:hover, a:hover, .interactive-element:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px ${themeData.primary_color}40;
-      }
-      
-      button:active {
-        transform: translateY(0px);
-      }
-    `
-  }
-
-  const getCardStyles = (cardStyle, themeData) => {
-    const styles = {
-      flat: `
-        .card, .theme-card {
-          background: var(--bg-color);
-          border: none;
-          border-radius: var(--border-radius);
-        }
-      `,
-      elevated: `
-        .card, .theme-card {
-          background: var(--bg-color);
-          border-radius: var(--border-radius);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.1);
-        }
-        
-        .card:hover, .theme-card:hover {
-          box-shadow: 0 8px 24px rgba(0,0,0,0.2), 0 16px 40px rgba(0,0,0,0.15);
-          transform: translateY(-4px);
-        }
-      `,
-      outlined: `
-        .card, .theme-card {
-          background: var(--bg-color);
-          border: 2px solid var(--primary-color);
-          border-radius: var(--border-radius);
-        }
-      `,
-    }
-    return styles[cardStyle] || styles.flat
   }
 
   const applyParticleEffects = (themeData) => {
@@ -387,8 +358,14 @@ export default function ThemeProvider({ children }) {
     if (styleTag) styleTag.remove()
   }
 
+  const resolvedColors = useMemo(
+    () => resolveThemeTokens(theme || getDefaultTheme()),
+    [theme]
+  )
+
   const value = {
     theme,
+    resolvedColors,
     loading,
     currentSeason,
     isAutoTheme,

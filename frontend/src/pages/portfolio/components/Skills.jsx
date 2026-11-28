@@ -1,12 +1,15 @@
 import React from 'react'
 import { useSeasonContext } from '../../../context/useSeasonContext'
 import { useTheme } from '../../../context/ThemeContext'
+import { useReveal } from '../../../hooks/useReveal'
 import './Skills.css'
 
 export default function Skills({ skills }) {
   const { config: seasonConfig } = useSeasonContext()
   const { theme } = useTheme()
+  const [revealRef, visible] = useReveal()
   const list = Array.isArray(skills) ? skills : []
+  if (list.length === 0) return null
 
   const colors = theme ? {
     primary:    theme.primary_color    || seasonConfig?.colors?.primary    || '#1a472a',
@@ -24,7 +27,8 @@ export default function Skills({ skills }) {
 
   return (
     <section
-      className="skills"
+      ref={revealRef}
+      className={`skills pv-reveal${visible ? ' pv-reveal--visible' : ''}`}
       id="skills"
       style={{
         '--sp':  colors.primary,
@@ -37,24 +41,30 @@ export default function Skills({ skills }) {
       <div className="skills-inner">
 
         <div className="skills-heading">
-          <span className="skills-label">Expertise</span>
-          <h2 className="skills-title">Skills & Tools</h2>
-          <p className="skills-subtitle">
-            Technologies I work with to build great products
-          </p>
+          <div>
+            <span className="pv-section-eyebrow skills-label">
+              <span className="pv-section-eyebrow-num">04</span>
+              <span>Toolkit</span>
+            </span>
+            <h2 className="skills-title">Skills &amp; Technologies</h2>
+          </div>
+          <span className="skills-count">
+            {list.length} {list.length === 1 ? 'skill' : 'skills'}
+          </span>
         </div>
 
-        <div className="skills-container">
+        <ul className="skills-container">
           {list.map((skill, idx) => (
-            <div
+            <li
               key={skill.id}
               className="skill-badge"
-              style={{ animationDelay: `${idx * 0.04}s` }}
+              style={visible ? { transitionDelay: `${Math.min(idx * 25, 350)}ms` } : undefined}
             >
+              <span className="skill-dot" aria-hidden="true" />
               <span className="skill-name">{skill.name}</span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
 
       </div>
     </section>

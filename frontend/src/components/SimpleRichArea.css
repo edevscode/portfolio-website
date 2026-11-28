@@ -52,10 +52,3 @@
   padding: 0.25em 0.8em;
   opacity: 0.8;
 }
-
-@media (prefers-color-scheme: dark) {
-  .sra { background: #0f172a; color: #f1f5f9; border-color: #334155; }
-  .sra:focus { border-color: #818cf8; }
-  .sra hr { border-top-color: #334155; }
-  .sra code { background: rgba(255, 255, 255, 0.1); }
-}
